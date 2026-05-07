@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>CoreHub Test Client</title>
+</head>
+
+<body>
+    <h2>CoreHub WebSocket Test</h2>
+    <input id="messageInput" type="text" placeholder="Type a message...">
+    <button onclick="sendMessage()">Send</button>
+    <div id="output"></div>
+
+    <script>
+        // Connect to the Go Server via WebSocket
+        // Replace 'localhost' with your IP if testing from another laptop
+        const socket = new WebSocket("ws://172.18.200.245:8080/ws");
+
+        socket.onopen = () => {
+            document.getElementById("output").innerHTML += "<p style='color:green'>Connected to Server!</p>";
+        };
+
+        socket.onmessage = (event) => {
+            document.getElementById("output").innerHTML += "<p>Server says: " + event.data + "</p>";
+        };
+
+        socket.onclose = () => {
+            document.getElementById("output").innerHTML += "<p style='color:red'>Disconnected from Server.</p>";
+        };
+
+        function sendMessage() {
+            const input = document.getElementById("messageInput");
+            socket.send(input.value);
+            input.value = "";
+        }
+    </script>
+</body>
+
+</html>
