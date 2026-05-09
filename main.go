@@ -3,23 +3,18 @@ package main
 import (
 	"corehub/database"
 	"corehub/handlers"
-	"fmt"
+	"corehub/middleware"
+	"log"
 	"net/http"
 )
 
 func main() {
-	// 1. Initialize Database
-	database.InitDB()
+	database.Connect()
 
-	// 2. Define Routes
 	http.HandleFunc("/register", handlers.RegisterHandler)
 	http.HandleFunc("/login", handlers.LoginHandler)
-	http.HandleFunc("/ws", handlers.HandleConnections)
+	http.HandleFunc("/ws", middleware.AuthMiddleware(handlers.HandleConnections))
 
-	// 3. Start Server
-	fmt.Println("CoreHub Server is live on :8080")
-	err := http.ListenAndServe("0.0.0.0:8080", nil)
-	if err != nil {
-		fmt.Println("Server failed to start:", err)
-	}
+	log.Println("Server starting on :8080...")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }

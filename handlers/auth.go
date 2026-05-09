@@ -2,39 +2,61 @@ package handlers
 
 import (
 	"corehub/database"
-	"corehub/models"
+	"corehub/utils"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
+type User struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	var user models.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
 		return
 	}
 
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
-	_, err := database.DB.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", user.Username, string(hashedPassword))
+	var user User
+	json.NewDecoder(r.Body).Decode(&user)
+
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	_, err := database.DB.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", user.Username, hashedPassword)
+
 	if err != nil {
-		http.Error(w, "Username already exists", http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Registration failed"})
 		return
 	}
-	fmt.Fprintf(w, "User %s registered successfully", user.Username)
+	json.NewEncoder(w).Encode(map[string]string{"message": "User registered successfully"})
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
-	var user models.User
-	json.NewDecoder(r.Body).Decode(&user)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	var storedPassword string
-	err := database.DB.QueryRow("SELECT password FROM users WHERE username=$1", user.Username).Scan(&storedPassword)
-	if err != nil || bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(user.Password)) != nil {
-		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+	if r.Method == "OPTIONS" {
 		return
 	}
-	fmt.Fprintf(w, "Login successful! Welcome %s", user.Username)
+
+	var user User
+	json.NewDecoder(r.Body).Decode(&user)
+
+	var hashedPassword string
+	err := database.DB.QueryRow("SELECT password FROM users WHERE username=$1", user.Username).Scan(&hashedPassword)
+	if err != nil || bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(user.Password)) != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Invalid credentials"})
+		return
+	}
+
+	token, _ := utils.GenerateToken(user.Username)
+	json.NewEncoder(w).Encode(map[string]string{"token": token})
 }

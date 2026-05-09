@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"corehub/database"
 	"fmt"
 	"net/http"
 	"sync"
@@ -9,51 +8,45 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var clients = make(map[*websocket.Conn]string)
+var mu sync.Mutex
+
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-var (
-	clients   = make(map[*websocket.Conn]bool)
-	clientsMu sync.Mutex
-)
-
 func HandleConnections(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+	username := r.Context().Value("username").(string)
+
+	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Println("WebSocket upgrade error:", err)
 		return
 	}
-	defer conn.Close()
+	defer ws.Close()
 
-	clientsMu.Lock()
-	clients[conn] = true
-	fmt.Printf("New Client Connected! Total Active: %d\n", len(clients))
-	clientsMu.Unlock()
+	mu.Lock()
+	clients[ws] = username
+	mu.Unlock()
+
+	broadcast(fmt.Sprintf("System: %s joined", username))
 
 	for {
-		_, msg, err := conn.ReadMessage()
+		_, msg, err := ws.ReadMessage()
 		if err != nil {
-			clientsMu.Lock()
-			delete(clients, conn)
-			fmt.Printf("Client Disconnected. Remaining: %d\n", len(clients))
-			clientsMu.Unlock()
+			mu.Lock()
+			delete(clients, ws)
+			mu.Unlock()
+			broadcast(fmt.Sprintf("System: %s left", username))
 			break
 		}
-
-		database.DB.Exec("INSERT INTO messages (sender, content) VALUES ($1, $2)", "User", string(msg))
-		broadcastMessage(string(msg))
+		broadcast(fmt.Sprintf("%s: %s", username, string(msg)))
 	}
 }
 
-func broadcastMessage(message string) {
-	clientsMu.Lock()
-	defer clientsMu.Unlock()
+func broadcast(message string) {
+	mu.Lock()
+	defer mu.Unlock()
 	for client := range clients {
-		err := client.WriteMessage(websocket.TextMessage, []byte(message))
-		if err != nil {
-			client.Close()
-			delete(clients, client)
-		}
+		client.WriteMessage(websocket.TextMessage, []byte(message))
 	}
 }

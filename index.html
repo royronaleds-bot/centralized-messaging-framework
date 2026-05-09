@@ -2,36 +2,122 @@
 <html>
 
 <head>
-    <title>CoreHub Test Client</title>
+    <title>CoreHub Messenger</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            padding: 50px;
+            background: #f0f2f5;
+        }
+        
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 400px;
+        }
+        
+        input {
+            width: 100%;
+            margin: 5px 0;
+            padding: 10px;
+            box-sizing: border-box;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        button {
+            width: 100%;
+            padding: 10px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        
+        #chat-view {
+            display: none;
+        }
+        
+        #msg-box {
+            height: 250px;
+            border: 1px solid #eee;
+            overflow-y: auto;
+            margin: 10px 0;
+            padding: 10px;
+            background: #fafafa;
+        }
+    </style>
 </head>
 
 <body>
-    <h2>CoreHub WebSocket Test</h2>
-    <input id="messageInput" type="text" placeholder="Type a message...">
-    <button onclick="sendMessage()">Send</button>
-    <div id="output"></div>
+    <div class="card">
+        <div id="auth-view">
+            <h2>CoreHub Login</h2>
+            <input type="text" id="user" placeholder="Username">
+            <input type="password" id="pass" placeholder="Password">
+            <button onclick="auth('register')" style="background:#6c757d; margin-bottom:5px;">Register</button>
+            <button onclick="auth('login')">Login</button>
+        </div>
+        <div id="chat-view">
+            <div id="user-info">Logged in as: <strong id="current-username"></strong></div>
+            <div id="msg-box"></div>
+            <input type="text" id="msgInput" placeholder="Write a message...">
+            <button onclick="send()">Send Message</button>
+        </div>
+    </div>
 
     <script>
-        // Connect to the Go Server via WebSocket
-        // Replace 'localhost' with your IP if testing from another laptop
-        const socket = new WebSocket("ws://172.18.200.245:8080/ws");
+        let ws;
+        async function auth(type) {
+            const u = document.getElementById('user').value;
+            const p = document.getElementById('pass').value;
+            const res = await fetch("http://localhost:8080/" + type, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: u,
+                    password: p
+                })
+            });
+            const data = await res.json();
+            if (res.ok && type === 'login') {
+                startChat(u, data.token);
+            } else {
+                alert(data.message || "Operation successful");
+            }
+        }
 
-        socket.onopen = () => {
-            document.getElementById("output").innerHTML += "<p style='color:green'>Connected to Server!</p>";
-        };
+        function startChat(username, token) {
+            document.getElementById('auth-view').style.display = 'none';
+            document.getElementById('chat-view').style.display = 'block';
+            document.getElementById('current-username').innerText = username;
 
-        socket.onmessage = (event) => {
-            document.getElementById("output").innerHTML += "<p>Server says: " + event.data + "</p>";
-        };
+            ws = new WebSocket("ws://localhost:8080/ws?token=" + token);
 
-        socket.onclose = () => {
-            document.getElementById("output").innerHTML += "<p style='color:red'>Disconnected from Server.</p>";
-        };
+            ws.onmessage = (e) => {
+                const box = document.getElementById('msg-box');
+                const div = document.createElement('div');
+                div.textContent = e.data;
+                box.appendChild(div);
+                box.scrollTop = box.scrollHeight;
+            };
 
-        function sendMessage() {
-            const input = document.getElementById("messageInput");
-            socket.send(input.value);
-            input.value = "";
+            ws.onerror = (err) => console.error("WebSocket Error:", err);
+        }
+
+        function send() {
+            const i = document.getElementById('msgInput');
+            if (i.value) {
+                ws.send(i.value);
+                i.value = '';
+            }
         }
     </script>
 </body>
