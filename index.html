@@ -1,82 +1,137 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>CoreHub Messenger</title>
+    <meta charset="UTF-8">
+    <title>CoreHub Chat</title>
     <style>
+        /* Basic styling for the application */
+        
         body {
-            font-family: sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
             display: flex;
             justify-content: center;
-            padding: 50px;
-            background: #f0f2f5;
+            padding: 20px;
         }
         
         .card {
             background: white;
+            width: 450px;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            width: 400px;
-        }
-        
-        input {
-            width: 100%;
-            margin: 5px 0;
-            padding: 10px;
-            box-sizing: border-box;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-        }
-        
-        button {
-            width: 100%;
-            padding: 10px;
-            cursor: pointer;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-        
-        #chat-view {
-            display: none;
         }
         
         #msg-box {
-            height: 250px;
-            border: 1px solid #eee;
+            height: 350px;
+            border: 1px solid #ddd;
             overflow-y: auto;
             margin: 10px 0;
             padding: 10px;
-            background: #fafafa;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border-radius: 5px;
+        }
+        
+        .msg {
+            margin: 5px;
+            padding: 8px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        
+        .me {
+            align-self: flex-end;
+            background: #0084ff;
+            color: white;
+        }
+        
+        .others {
+            align-self: flex-start;
+            background: #e4e6eb;
+            color: black;
+        }
+        
+        input {
+            width: 80%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background: #1877f2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #166fe5;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 5px;
+            flex-direction: column;
+        }
+        
+        .chat-controls {
+            display: flex;
+            gap: 5px;
         }
     </style>
 </head>
 
 <body>
+
     <div class="card">
-        <div id="auth-view">
+        <div id="auth-section">
             <h2>CoreHub Login</h2>
-            <input type="text" id="user" placeholder="Username">
-            <input type="password" id="pass" placeholder="Password">
-            <button onclick="auth('register')" style="background:#6c757d; margin-bottom:5px;">Register</button>
-            <button onclick="auth('login')">Login</button>
+            <div class="input-group">
+                <input type="text" id="user" placeholder="Username">
+                <input type="password" id="pass" placeholder="Password">
+                <div style="display: flex; gap: 5px;">
+                    <button onclick="auth('login')" style="flex: 1;">Login</button>
+                    <button onclick="auth('register')" style="background:#42b72a; flex: 1;">Register</button>
+                </div>
+            </div>
         </div>
-        <div id="chat-view">
-            <div id="user-info">Logged in as: <strong id="current-username"></strong></div>
+
+        <div id="chat-section" style="display:none">
+            <h3 id="user-display"></h3>
+
+            <div style="display:flex; gap:5px; margin-bottom: 10px;">
+                <input type="text" id="receiverInput" placeholder="Recipient Username..." style="flex: 1;">
+                <button onclick="loadChat()" style="background: #42b72a;">Load Chat</button>
+            </div>
+
             <div id="msg-box"></div>
-            <input type="text" id="msgInput" placeholder="Write a message...">
-            <button onclick="send()">Send Message</button>
+
+            <div class="chat-controls">
+                <input type="text" id="msgInput" placeholder="Write a message..." style="flex: 1;">
+                <button onclick="sendMsg()">Send</button>
+            </div>
         </div>
     </div>
 
     <script>
         let ws;
+        let myName = "";
+        let myToken = ""; // أضفنا هذا المتغير لتخزين التوكن
+
         async function auth(type) {
             const u = document.getElementById('user').value;
             const p = document.getElementById('pass').value;
-            const res = await fetch("http://localhost:8080/" + type, {
+
+            const res = await fetch(`http://localhost:8080/${type}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -86,38 +141,87 @@
                     password: p
                 })
             });
+
             const data = await res.json();
-            if (res.ok && type === 'login') {
-                startChat(u, data.token);
+
+            if (res.ok) {
+                if (type === 'register') return alert("Registration successful! You can now login.");
+
+                myName = u;
+                myToken = data.token; // حفظ التوكن هنا
+
+                document.getElementById('auth-section').style.display = 'none';
+                document.getElementById('chat-section').style.display = 'block';
+                document.getElementById('user-display').innerText = "Logged in as: " + u;
+
+                // مسح الشاشة عند الدخول لأننا لم نختر من سنحادث بعد
+                document.getElementById('msg-box').innerHTML = '<p style="text-align:center; color:#888;">Select a user and click Load Chat</p>';
+
+                startWS(myToken);
             } else {
-                alert(data.message || "Operation successful");
+                alert(data.message || "Authentication failed");
             }
         }
 
-        function startChat(username, token) {
-            document.getElementById('auth-view').style.display = 'none';
-            document.getElementById('chat-view').style.display = 'block';
-            document.getElementById('current-username').innerText = username;
+        // دالة جديدة لجلب المحادثة الخاصة بالشخص المطلوب
+        async function loadChat() {
+            const receiver = document.getElementById('receiverInput').value;
+            if (!receiver) {
+                alert("Please enter a username to chat with!");
+                return;
+            }
 
-            ws = new WebSocket("ws://localhost:8080/ws?token=" + token);
+            const res = await fetch(`http://localhost:8080/messages?token=${myToken}&with=${receiver}`);
+            if (res.ok) {
+                const messages = await res.json();
+                const box = document.getElementById('msg-box');
+                box.innerHTML = ''; // مسح الصندوق
+
+                if (messages && messages.length > 0) {
+                    messages.forEach(msg => appendMessage(msg));
+                } else {
+                    box.innerHTML = '<p style="text-align:center; color:#888;">No messages yet. Start saying Hi!</p>';
+                }
+            }
+        }
+
+        function startWS(token) {
+            ws = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
 
             ws.onmessage = (e) => {
-                const box = document.getElementById('msg-box');
-                const div = document.createElement('div');
-                div.textContent = e.data;
-                box.appendChild(div);
-                box.scrollTop = box.scrollHeight;
-            };
+                const data = JSON.parse(e.data);
+                const currentReceiver = document.getElementById('receiverInput').value;
 
-            ws.onerror = (err) => console.error("WebSocket Error:", err);
+                // فلترة لحظية: اعرض الرسالة فقط إذا كانت تخص المحادثة المفتوحة حالياً
+                if (data.username === currentReceiver || data.username === myName) {
+                    appendMessage(data);
+                }
+            };
         }
 
-        function send() {
-            const i = document.getElementById('msgInput');
-            if (i.value) {
-                ws.send(i.value);
-                i.value = '';
+        function sendMsg() {
+            const msgInput = document.getElementById('msgInput');
+            const receiverInput = document.getElementById('receiverInput');
+
+            if (msgInput.value && receiverInput.value && ws && ws.readyState === WebSocket.OPEN) {
+                const payload = {
+                    content: msgInput.value,
+                    receiver_username: receiverInput.value
+                };
+                ws.send(JSON.stringify(payload));
+                msgInput.value = '';
+            } else if (!receiverInput.value) {
+                alert("Please specify a recipient!");
             }
+        }
+
+        function appendMessage(data) {
+            const box = document.getElementById('msg-box');
+            const div = document.createElement('div');
+            div.className = `msg ${data.username === myName ? 'me' : 'others'}`;
+            div.innerHTML = `<b>${data.username}:</b> ${data.content}`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
         }
     </script>
 </body>
