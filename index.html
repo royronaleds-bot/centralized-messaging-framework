@@ -5,87 +5,161 @@
     <meta charset="UTF-8">
     <title>CoreHub Chat</title>
     <style>
-        /* Basic styling for the application */
-        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f0f2f5;
             display: flex;
             justify-content: center;
             padding: 20px;
+            margin: 0;
         }
         
         .card {
             background: white;
-            width: 450px;
-            padding: 20px;
+            width: 800px;
+            max-width: 95vw;
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #auth-section {
+            padding: 40px;
+            text-align: center;
+        }
+        
+        #chat-layout {
+            display: none;
+            flex-direction: row;
+            height: 500px;
+        }
+        
+        #sidebar {
+            width: 30%;
+            border-right: 1px solid #ddd;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-header {
+            padding: 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+        }
+        
+        #user-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .user-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .user-item:hover {
+            background: #f0f2f5;
+        }
+        
+        .user-item.active {
+            background: #e4e6eb;
+            font-weight: bold;
+        }
+        
+        #main-chat {
+            width: 70%;
+            display: flex;
+            flex-direction: column;
+            background: #efeae2;
+        }
+        
+        #chat-header {
+            padding: 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
         }
         
         #msg-box {
-            height: 350px;
-            border: 1px solid #ddd;
+            flex: 1;
+            padding: 20px;
             overflow-y: auto;
-            margin: 10px 0;
-            padding: 10px;
             display: flex;
             flex-direction: column;
-            background: #fff;
-            border-radius: 5px;
         }
         
         .msg {
-            margin: 5px;
-            padding: 8px 12px;
+            margin: 5px 0;
+            padding: 10px 14px;
             border-radius: 15px;
             font-size: 14px;
-            max-width: 80%;
+            max-width: 70%;
             word-wrap: break-word;
+            position: relative;
+            /* مهم لتموضع الصح */
         }
         
         .me {
             align-self: flex-end;
-            background: #0084ff;
-            color: white;
+            background: #dcf8c6;
+            border-bottom-right-radius: 2px;
         }
         
         .others {
             align-self: flex-start;
-            background: #e4e6eb;
-            color: black;
+            background: #ffffff;
+            border-bottom-left-radius: 2px;
         }
         
-        input {
-            width: 80%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-bottom: 5px;
-        }
-        
-        button {
-            padding: 10px 15px;
-            background: #1877f2;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        
-        button:hover {
-            background: #166fe5;
-        }
-        
-        .input-group {
-            display: flex;
-            gap: 5px;
-            flex-direction: column;
+        #typing-indicator {
+            padding: 0 20px;
+            color: #888;
+            font-size: 13px;
+            font-style: italic;
+            min-height: 20px;
+            background: #efeae2;
         }
         
         .chat-controls {
             display: flex;
-            gap: 5px;
+            padding: 15px;
+            background: #f0f0f0;
+            gap: 10px;
+        }
+        
+        input[type="text"],
+        input[type="password"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+        }
+        
+        .chat-controls input {
+            flex: 1;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #1877f2;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background: #166fe5;
         }
     </style>
 </head>
@@ -94,30 +168,35 @@
 
     <div class="card">
         <div id="auth-section">
-            <h2>CoreHub Login</h2>
-            <div class="input-group">
+            <h2>Welcome to CoreHub</h2>
+            <div style="display: flex; flex-direction: column; gap: 10px; max-width: 300px; margin: 0 auto;">
                 <input type="text" id="user" placeholder="Username">
                 <input type="password" id="pass" placeholder="Password">
-                <div style="display: flex; gap: 5px;">
+                <div style="display: flex; gap: 10px;">
                     <button onclick="auth('login')" style="flex: 1;">Login</button>
                     <button onclick="auth('register')" style="background:#42b72a; flex: 1;">Register</button>
                 </div>
             </div>
         </div>
 
-        <div id="chat-section" style="display:none">
-            <h3 id="user-display"></h3>
-
-            <div style="display:flex; gap:5px; margin-bottom: 10px;">
-                <input type="text" id="receiverInput" placeholder="Recipient Username..." style="flex: 1;">
-                <button onclick="loadChat()" style="background: #42b72a;">Load Chat</button>
+        <div id="chat-layout">
+            <div id="sidebar">
+                <div class="sidebar-header" id="my-profile-name">My Profile</div>
+                <div id="user-list"></div>
             </div>
 
-            <div id="msg-box"></div>
+            <div id="main-chat">
+                <div id="chat-header">Select a user to start chatting</div>
+                <div id="msg-box">
+                    <p style="text-align:center; color:#888; margin-top: 50px;">Please select a conversation from the left menu.</p>
+                </div>
 
-            <div class="chat-controls">
-                <input type="text" id="msgInput" placeholder="Write a message..." style="flex: 1;">
-                <button onclick="sendMsg()">Send</button>
+                <div id="typing-indicator"></div>
+
+                <div class="chat-controls">
+                    <input type="text" id="msgInput" placeholder="Type a message..." disabled oninput="notifyTyping()">
+                    <button id="sendBtn" onclick="sendMsg()" disabled>Send</button>
+                </div>
             </div>
         </div>
     </div>
@@ -125,63 +204,101 @@
     <script>
         let ws;
         let myName = "";
-        let myToken = ""; // أضفنا هذا المتغير لتخزين التوكن
+        let myToken = "";
+        let currentReceiver = "";
+        let typingTimeout;
 
         async function auth(type) {
             const u = document.getElementById('user').value;
             const p = document.getElementById('pass').value;
 
-            const res = await fetch(`http://localhost:8080/${type}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    username: u,
-                    password: p
-                })
-            });
+            try {
+                const res = await fetch(`http://localhost:8080/${type}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: u,
+                        password: p
+                    })
+                });
 
-            const data = await res.json();
+                const data = await res.json();
 
-            if (res.ok) {
-                if (type === 'register') return alert("Registration successful! You can now login.");
+                if (res.ok) {
+                    if (type === 'register') return alert("Registration successful!");
 
-                myName = u;
-                myToken = data.token; // حفظ التوكن هنا
+                    myName = u;
+                    myToken = data.token;
 
-                document.getElementById('auth-section').style.display = 'none';
-                document.getElementById('chat-section').style.display = 'block';
-                document.getElementById('user-display').innerText = "Logged in as: " + u;
+                    document.getElementById('auth-section').style.display = 'none';
+                    document.getElementById('chat-layout').style.display = 'flex';
+                    document.getElementById('my-profile-name').innerText = "Logged in as: " + u;
 
-                // مسح الشاشة عند الدخول لأننا لم نختر من سنحادث بعد
-                document.getElementById('msg-box').innerHTML = '<p style="text-align:center; color:#888;">Select a user and click Load Chat</p>';
-
-                startWS(myToken);
-            } else {
-                alert(data.message || "Authentication failed");
+                    await fetchUsers();
+                    startWS(myToken);
+                } else {
+                    alert(data.message || "Authentication failed");
+                }
+            } catch (error) {
+                console.error("Auth error:", error);
             }
         }
 
-        // دالة جديدة لجلب المحادثة الخاصة بالشخص المطلوب
-        async function loadChat() {
-            const receiver = document.getElementById('receiverInput').value;
-            if (!receiver) {
-                alert("Please enter a username to chat with!");
-                return;
-            }
+        async function fetchUsers() {
+            try {
+                const res = await fetch(`http://localhost:8080/users?token=${myToken}`);
+                if (res.ok) {
+                    const users = await res.json();
+                    const list = document.getElementById('user-list');
+                    list.innerHTML = '';
 
-            const res = await fetch(`http://localhost:8080/messages?token=${myToken}&with=${receiver}`);
-            if (res.ok) {
-                const messages = await res.json();
-                const box = document.getElementById('msg-box');
-                box.innerHTML = ''; // مسح الصندوق
+                    if (users && users.length > 0) {
+                        users.forEach(u => {
+                            const div = document.createElement('div');
+                            div.className = 'user-item';
+                            div.id = `user-${u.username}`;
 
-                if (messages && messages.length > 0) {
-                    messages.forEach(msg => appendMessage(msg));
-                } else {
-                    box.innerHTML = '<p style="text-align:center; color:#888;">No messages yet. Start saying Hi!</p>';
+                            const dot = u.online ? "🟢" : "";
+
+                            div.innerHTML = `<span>${u.username}</span> <span class="status-indicator">${dot}</span>`;
+                            div.onclick = () => loadChat(u.username);
+                            list.appendChild(div);
+                        });
+                    }
                 }
+            } catch (error) {
+                console.error("Error fetching users:", error);
+            }
+        }
+
+        async function loadChat(receiver) {
+            currentReceiver = receiver;
+            document.getElementById('chat-header').innerText = `Chatting with: ${receiver}`;
+            document.getElementById('msgInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+
+            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`user-${receiver}`).classList.add('active');
+
+            hideTypingIndicator();
+
+            try {
+                const res = await fetch(`http://localhost:8080/messages?token=${myToken}&with=${receiver}`);
+                if (res.ok) {
+                    const messages = await res.json();
+                    const box = document.getElementById('msg-box');
+                    box.innerHTML = '';
+
+                    if (messages && messages.length > 0) {
+                        messages.forEach(msg => appendMessage(msg));
+                    } else {
+                        box.innerHTML = '<p style="text-align:center; color:#888; margin-top: 50px;">No messages yet.</p>';
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading chat:", error);
             }
         }
 
@@ -190,36 +307,145 @@
 
             ws.onmessage = (e) => {
                 const data = JSON.parse(e.data);
-                const currentReceiver = document.getElementById('receiverInput').value;
 
-                // فلترة لحظية: اعرض الرسالة فقط إذا كانت تخص المحادثة المفتوحة حالياً
-                if (data.username === currentReceiver || data.username === myName) {
-                    appendMessage(data);
+                if (data.type === "status") {
+                    updateUserStatus(data.username, data.content);
+                } else if (data.type === "typing") {
+                    if (data.username === currentReceiver) {
+                        showTypingIndicator(data.username);
+                    }
+                }
+                // --- الإضافات الجديدة الخاصة بالصح والصحين ---
+                else if (data.type === "server_ack") {
+                    // السيرفر استلمها وحفظها: غير الحالة إلى "صح واحد ✓"
+                    const msgDiv = document.getElementById(`msg-${data.id}`);
+                    if (msgDiv) {
+                        const tickSpan = msgDiv.querySelector('.tick');
+                        if (tickSpan) tickSpan.innerText = "✓";
+                    }
+                } else if (data.type === "delivery_ack") {
+                    // الطرف الآخر استلمها: غير الحالة إلى "صحين ✓✓" بلون أزرق
+                    const msgDiv = document.getElementById(`msg-${data.id}`);
+                    if (msgDiv) {
+                        const tickSpan = msgDiv.querySelector('.tick');
+                        if (tickSpan) {
+                            tickSpan.innerText = "✓✓";
+                            tickSpan.style.color = "#53bdeb"; // أزرق واتساب
+                            tickSpan.style.fontWeight = "bold";
+                        }
+                    }
+                } else if (data.type === "chat") {
+                    if (data.username === myName) {
+                        // نتجاهل الرسالة لأننا أضفناها مسبقاً للشاشة لحظة الإرسال
+                        return;
+                    }
+
+                    // إذا استلمنا رسالة من شخص آخر (بغض النظر عما إذا كنا فاتحين الشات معه أم لا)
+                    // نرسل فوراً تأكيد "أننا استلمناها" لكي تظهر عنده صحين
+                    if (data.id) {
+                        ws.send(JSON.stringify({
+                            type: "delivery_ack",
+                            id: data.id,
+                            receiver_username: data.username
+                        }));
+                    }
+
+                    if (data.username === currentReceiver) {
+                        hideTypingIndicator();
+                        appendMessage(data);
+                    }
                 }
             };
         }
 
-        function sendMsg() {
-            const msgInput = document.getElementById('msgInput');
-            const receiverInput = document.getElementById('receiverInput');
-
-            if (msgInput.value && receiverInput.value && ws && ws.readyState === WebSocket.OPEN) {
-                const payload = {
-                    content: msgInput.value,
-                    receiver_username: receiverInput.value
-                };
-                ws.send(JSON.stringify(payload));
-                msgInput.value = '';
-            } else if (!receiverInput.value) {
-                alert("Please specify a recipient!");
+        function updateUserStatus(username, status) {
+            const userDiv = document.getElementById(`user-${username}`);
+            if (userDiv) {
+                const indicator = userDiv.querySelector('.status-indicator');
+                if (status === "online") {
+                    indicator.innerText = "🟢";
+                } else {
+                    indicator.innerText = "";
+                }
             }
         }
 
-        function appendMessage(data) {
+        function notifyTyping() {
+            if (ws && ws.readyState === WebSocket.OPEN && currentReceiver) {
+                ws.send(JSON.stringify({
+                    type: "typing",
+                    receiver_username: currentReceiver
+                }));
+            }
+        }
+
+        function showTypingIndicator(username) {
+            const ind = document.getElementById('typing-indicator');
+            ind.innerText = `${username} is typing...`;
+
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                ind.innerText = "";
+            }, 1500);
+        }
+
+        function hideTypingIndicator() {
+            const ind = document.getElementById('typing-indicator');
+            if (ind) ind.innerText = "";
+            clearTimeout(typingTimeout);
+        }
+
+        function sendMsg() {
+            const msgInput = document.getElementById('msgInput');
+
+            if (msgInput.value && currentReceiver && ws && ws.readyState === WebSocket.OPEN) {
+                // توليد ID فريد للرسالة لنتمكن من تتبعها
+                const uniqueId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+
+                const payload = {
+                    id: uniqueId,
+                    type: "chat",
+                    content: msgInput.value,
+                    receiver_username: currentReceiver
+                };
+
+                // نظهرها على الشاشة فوراً مع أيقونة 🕒 (جاري الإرسال)
+                payload.username = myName;
+                appendMessage(payload, "🕒");
+
+                ws.send(JSON.stringify(payload));
+                msgInput.value = '';
+            }
+        }
+
+        // تم التعديل لدعم رسم الـ (tick) وإعطاء ID للرسالة
+        function appendMessage(data, tick = "") {
             const box = document.getElementById('msg-box');
+            if (document.querySelector('#msg-box p')) box.innerHTML = '';
+
             const div = document.createElement('div');
-            div.className = `msg ${data.username === myName ? 'me' : 'others'}`;
-            div.innerHTML = `<b>${data.username}:</b> ${data.content}`;
+            if (data.id) div.id = `msg-${data.id}`;
+
+            if (data.username === myName) {
+                div.className = `msg me`;
+
+                // تحديد شكل الصح بناءً على الحالة القادمة من السيرفر
+                let tickIcon = "✓";
+                let tickColor = "#999";
+
+                if (data.status === "delivered" || tick === "✓✓") {
+                    tickIcon = "✓✓";
+                    tickColor = "#53bdeb"; // أزرق
+                } else if (tick === "🕒") {
+                    tickIcon = "🕒";
+                }
+
+                div.innerHTML = `<b>${data.username}:</b><br>${data.content} <span class="tick" style="float:right; font-size:12px; color:${tickColor}; margin-left: 15px;">${tickIcon}</span>`;
+            } else {
+                div.className = `msg others`;
+                div.innerHTML = `<b>${data.username}:</b><br>${data.content}`;
+            }
+
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         }

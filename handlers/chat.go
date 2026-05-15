@@ -20,23 +20,28 @@ var (
 )
 
 type Message struct {
-	Username         string `json:"username"`          // اسم المرسل
-	ReceiverUsername string `json:"receiver_username"` // اسم المستلم (الجديد)
-	Content          string `json:"content"`           // محتوى الرسالة
+	ID               string `json:"id"`
+	Type             string `json:"type"`
+	Username         string `json:"username"`
+	ReceiverUsername string `json:"receiver_username"`
+	Content          string `json:"content"`
+	Status           string `json:"status"` // أضفنا هذا الحقل لمزامنة الحالة مع القاعدة
+}
+
+type UserWithStatus struct {
+	Username string `json:"username"`
+	Online   bool   `json:"online"`
 }
 
 func HandleConnections(w http.ResponseWriter, r *http.Request) {
-	// جلب اسم المستخدم الذي وضعه الميدل وير في الـ Context
 	val := r.Context().Value("username")
 	if val == nil {
-		log.Println("⚠️ فشل الاتصال: اسم المستخدم غير موجود في السياق")
 		return
 	}
 	username := val.(string)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("❌ خطأ في ترقية الاتصال: %v", err)
 		return
 	}
 
@@ -44,14 +49,14 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	clients[conn] = username
 	mutex.Unlock()
 
-	log.Printf("✅ متصل الآن: %s", username)
+	broadcast <- Message{Type: "status", Username: username, Content: "online"}
 
 	defer func() {
 		mutex.Lock()
 		delete(clients, conn)
 		mutex.Unlock()
 		conn.Close()
-		log.Printf("🔌 انقطع اتصال: %s", username)
+		broadcast <- Message{Type: "status", Username: username, Content: "offline"}
 	}()
 
 	for {
@@ -64,13 +69,26 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 		if err := json.Unmarshal(rawMsg, &msg); err == nil {
 			msg.Username = username
 
-			// حفظ الرسالة في قاعدة البيانات
-			_, dbErr := database.DB.Exec("INSERT INTO messages (username, receiver_username, content) VALUES ($1, $2, $3)", msg.Username, msg.ReceiverUsername, msg.Content)
-			if dbErr != nil {
-				log.Printf("❌ خطأ في حفظ الرسالة: %v", dbErr)
+			if msg.Type == "chat" {
+				// حفظ الرسالة مع الـ ID القادم من الواجهة والحالة الافتراضية 'sent'
+				_, dbErr := database.DB.Exec(
+					"INSERT INTO messages (username, receiver_username, content, client_msg_id, status) VALUES ($1, $2, $3, $4, $5)",
+					msg.Username, msg.ReceiverUsername, msg.Content, msg.ID, "sent",
+				)
+				if dbErr == nil {
+					broadcast <- Message{Type: "server_ack", ID: msg.ID, ReceiverUsername: msg.Username}
+				}
+			} else if msg.Type == "delivery_ack" {
+				// --- التحديث الجديد: حفظ حالة التسليم في قاعدة البيانات ---
+				_, dbErr := database.DB.Exec(
+					"UPDATE messages SET status = 'delivered' WHERE client_msg_id = $1",
+					msg.ID,
+				)
+				if dbErr != nil {
+					log.Printf("❌ فشل تحديث حالة التسليم: %v", dbErr)
+				}
 			}
 
-			log.Printf("📩 رسالة من [%s]: %s", msg.Username, msg.Content)
 			broadcast <- msg
 		}
 	}
@@ -80,49 +98,24 @@ func HandleMessages() {
 	for {
 		msg := <-broadcast
 		msgBytes, _ := json.Marshal(msg)
-
 		mutex.RLock()
 		for client, clientUsername := range clients {
-			// نرسل الرسالة فقط إذا كان المتصل هو "المستلم" أو "المرسل نفسه"
-			// (نرسلها للمرسل أيضاً لكي تظهر لديه على الشاشة كدليل على نجاح الإرسال)
-			if clientUsername == msg.ReceiverUsername || clientUsername == msg.Username {
-				err := client.WriteMessage(websocket.TextMessage, msgBytes)
-				if err != nil {
-					log.Printf("❌ فشل الإرسال لعميل: %v", err)
-					client.Close()
-					// هنا نحتاج إلى حذف العميل من قائمة clients،
-					// لكن لا يمكننا فعل ذلك داخل RLock، سيتم حذفه تلقائياً من HandleConnections
-				}
+			if msg.Type == "status" || msg.Type == "typing" || msg.Type == "server_ack" || msg.Type == "delivery_ack" || clientUsername == msg.ReceiverUsername || clientUsername == msg.Username {
+				client.WriteMessage(websocket.TextMessage, msgBytes)
 			}
 		}
 		mutex.RUnlock()
 	}
 }
 
-// دالة لجلب الرسائل القديمة من قاعدة البيانات
-// دالة لجلب الرسائل القديمة بين شخصين محددين
 func GetMessages(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	// 1. جلب اسمي أنا (من الميدل وير)
-	val := r.Context().Value("username")
-	if val == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	myUsername := val.(string)
-
-	// 2. جلب اسم الشخص الذي أريد التحدث معه (من الرابط)
+	myUsername := r.Context().Value("username").(string)
 	otherUser := r.URL.Query().Get("with")
-	if otherUser == "" {
-		json.NewEncoder(w).Encode([]Message{})
-		return
-	}
 
-	// 3. استعلام ذكي يجلب الرسائل المتبادلة بيننا فقط
+	// --- التحديث الجديد: جلب الـ ID والحالة الحقيقية من القاعدة ---
 	query := `
-		SELECT username, receiver_username, content 
+		SELECT username, receiver_username, content, client_msg_id, status 
 		FROM messages 
 		WHERE (username = $1 AND receiver_username = $2) 
 		   OR (username = $2 AND receiver_username = $1) 
@@ -130,19 +123,38 @@ func GetMessages(w http.ResponseWriter, r *http.Request) {
 	`
 	rows, err := database.DB.Query(query, myUsername, otherUser)
 	if err != nil {
-		log.Printf("❌ خطأ في جلب الرسائل: %v", err)
-		http.Error(w, "Failed to load messages", http.StatusInternalServerError)
+		http.Error(w, "Error", 500)
 		return
 	}
 	defer rows.Close()
 
 	var msgs []Message
 	for rows.Next() {
-		var msg Message
-		if err := rows.Scan(&msg.Username, &msg.ReceiverUsername, &msg.Content); err == nil {
-			msgs = append(msgs, msg)
+		var m Message
+		if err := rows.Scan(&m.Username, &m.ReceiverUsername, &m.Content, &m.ID, &m.Status); err == nil {
+			msgs = append(msgs, m)
 		}
 	}
-
 	json.NewEncoder(w).Encode(msgs)
+}
+
+func GetUsers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	myUsername := r.Context().Value("username").(string)
+	mutex.RLock()
+	onlineMap := make(map[string]bool)
+	for _, u := range clients {
+		onlineMap[u] = true
+	}
+	mutex.RUnlock()
+
+	rows, _ := database.DB.Query("SELECT username FROM users WHERE username != $1", myUsername)
+	defer rows.Close()
+	var users []UserWithStatus
+	for rows.Next() {
+		var u string
+		rows.Scan(&u)
+		users = append(users, UserWithStatus{Username: u, Online: onlineMap[u]})
+	}
+	json.NewEncoder(w).Encode(users)
 }

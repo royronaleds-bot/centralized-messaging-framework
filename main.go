@@ -17,7 +17,8 @@ func main() {
 	r := mux.NewRouter()
 	// مسار جلب الرسائل القديمة (محمي بالمصادقة)
 	r.HandleFunc("/messages", middleware.AuthMiddleware(handlers.GetMessages)).Methods("GET")
-
+	// مسار جلب قائمة المستخدمين (محمي بالمصادقة)
+	r.HandleFunc("/users", middleware.AuthMiddleware(handlers.GetUsers)).Methods("GET")
 	// تم تعديل الأسماء لتطابق الدوال الموجودة في auth.go
 	r.HandleFunc("/register", handlers.RegisterHandler).Methods("POST")
 	r.HandleFunc("/login", handlers.LoginHandler).Methods("POST")
