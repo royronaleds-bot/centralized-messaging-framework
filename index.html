@@ -33,7 +33,7 @@
         #chat-layout {
             display: none;
             flex-direction: row;
-            height: 500px;
+            height: 550px;
         }
         
         #sidebar {
@@ -49,11 +49,32 @@
             background: #f8f9fa;
             border-bottom: 1px solid #ddd;
             font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-title {
+            font-size: 12px;
+            padding: 8px 15px;
+            background: #e9ecef;
+            color: #555;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+            border-top: 1px solid #ddd;
+        }
+        
+        #user-list,
+        #group-list {
+            overflow-y: auto;
+        }
+        
+        #group-list {
+            max-height: 150px;
         }
         
         #user-list {
             flex: 1;
-            overflow-y: auto;
         }
         
         .user-item {
@@ -105,7 +126,6 @@
             max-width: 70%;
             word-wrap: break-word;
             position: relative;
-            /* مهم لتموضع الصح */
         }
         
         .me {
@@ -161,6 +181,26 @@
         button:hover {
             background: #166fe5;
         }
+        
+        .add-group-box {
+            display: flex;
+            padding: 10px;
+            gap: 5px;
+            background: #fff;
+        }
+        
+        .add-group-box input {
+            flex: 1;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        
+        .add-group-box button {
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
     </style>
 </head>
 
@@ -181,12 +221,25 @@
 
         <div id="chat-layout">
             <div id="sidebar">
-                <div class="sidebar-header" id="my-profile-name">My Profile</div>
+                <div class="sidebar-header">
+                    <span id="my-profile-name">My Profile</span>
+                    <button onclick="logout()" style="padding: 5px 10px; font-size: 12px; background: #dc3545; border-radius: 5px;">Logout</button>
+                </div>
+
+                <div class="add-group-box">
+                    <input type="text" id="groupNameInput" placeholder="New Group Name...">
+                    <button onclick="joinGroup()">+ Join</button>
+                </div>
+
+                <div class="section-title">GROUPS</div>
+                <div id="group-list"></div>
+
+                <div class="section-title">USERS</div>
                 <div id="user-list"></div>
             </div>
 
             <div id="main-chat">
-                <div id="chat-header">Select a user to start chatting</div>
+                <div id="chat-header">Select a user or group to start chatting</div>
                 <div id="msg-box">
                     <p style="text-align:center; color:#888; margin-top: 50px;">Please select a conversation from the left menu.</p>
                 </div>
@@ -206,7 +259,10 @@
         let myName = "";
         let myToken = "";
         let currentReceiver = "";
+        let currentGroupId = 0;
         let typingTimeout;
+
+        let offlineQueue = [];
 
         async function auth(type) {
             const u = document.getElementById('user').value;
@@ -237,12 +293,97 @@
                     document.getElementById('my-profile-name').innerText = "Logged in as: " + u;
 
                     await fetchUsers();
+                    await fetchGroups();
                     startWS(myToken);
                 } else {
                     alert(data.message || "Authentication failed");
                 }
             } catch (error) {
                 console.error("Auth error:", error);
+            }
+        }
+
+        async function joinGroup() {
+            const name = document.getElementById('groupNameInput').value;
+            if (!name) return;
+
+            try {
+                const res = await fetch(`http://localhost:8080/groups/join?token=${myToken}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name
+                    })
+                });
+
+                if (res.ok) {
+                    document.getElementById('groupNameInput').value = '';
+                    fetchGroups();
+                } else {
+                    alert("Failed to join group");
+                }
+            } catch (e) {
+                console.error("Error joining group:", e);
+            }
+        }
+
+        async function fetchGroups() {
+            try {
+                const res = await fetch(`http://localhost:8080/groups?token=${myToken}`);
+                if (res.ok) {
+                    const groups = await res.json();
+                    const list = document.getElementById('group-list');
+                    list.innerHTML = '';
+
+                    if (groups && groups.length > 0) {
+                        groups.forEach(g => {
+                            const div = document.createElement('div');
+                            div.className = 'user-item';
+                            div.id = `group-${g.id}`;
+                            div.innerHTML = `<span>👥 ${g.name}</span>`;
+                            div.onclick = () => loadGroupChat(g.id, g.name);
+                            list.appendChild(div);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching groups:", error);
+            }
+        }
+
+        async function loadGroupChat(groupId, groupName) {
+            currentReceiver = "";
+            currentGroupId = groupId;
+
+            document.getElementById('chat-header').innerText = `Group: ${groupName}`;
+            document.getElementById('msgInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+
+            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`group-${groupId}`).classList.add('active');
+
+            hideTypingIndicator();
+
+            try {
+                const res = await fetch(`http://localhost:8080/messages?token=${myToken}&group_id=${groupId}`);
+                if (res.ok) {
+                    const messages = await res.json();
+
+                    console.log("📥 Group Messages from DB:", messages);
+
+                    const box = document.getElementById('msg-box');
+                    box.innerHTML = '';
+
+                    if (messages && messages.length > 0) {
+                        messages.forEach(msg => appendMessage(msg));
+                    } else {
+                        box.innerHTML = '<p style="text-align:center; color:#888; margin-top: 50px;">No messages yet.</p>';
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading group chat:", error);
             }
         }
 
@@ -262,7 +403,7 @@
 
                             const dot = u.online ? "🟢" : "";
 
-                            div.innerHTML = `<span>${u.username}</span> <span class="status-indicator">${dot}</span>`;
+                            div.innerHTML = `<span>👤 ${u.username}</span> <span class="status-indicator">${dot}</span>`;
                             div.onclick = () => loadChat(u.username);
                             list.appendChild(div);
                         });
@@ -275,6 +416,8 @@
 
         async function loadChat(receiver) {
             currentReceiver = receiver;
+            currentGroupId = 0;
+
             document.getElementById('chat-header').innerText = `Chatting with: ${receiver}`;
             document.getElementById('msgInput').disabled = false;
             document.getElementById('sendBtn').disabled = false;
@@ -288,11 +431,28 @@
                 const res = await fetch(`http://localhost:8080/messages?token=${myToken}&with=${receiver}`);
                 if (res.ok) {
                     const messages = await res.json();
+
+                    console.log("📥 Messages from DB:", messages);
+
                     const box = document.getElementById('msg-box');
                     box.innerHTML = '';
 
                     if (messages && messages.length > 0) {
-                        messages.forEach(msg => appendMessage(msg));
+                        messages.forEach(msg => {
+                            appendMessage(msg);
+
+                            // 🌟 تحديث ذكي: إذا كانت الرسالة قادمة من الطرف الآخر وحالتها ليست delivered
+                            // نرسل إشعار استلام فوراً عبر الـ WebSocket لتتحول عند الطرف الآخر إلى صحين زرق
+                            if (msg.username !== myName && msg.status !== "delivered") {
+                                if (ws && ws.readyState === WebSocket.OPEN) {
+                                    ws.send(JSON.stringify({
+                                        type: "delivery_ack",
+                                        id: msg.id,
+                                        receiver_username: msg.username
+                                    }));
+                                }
+                            }
+                        });
                     } else {
                         box.innerHTML = '<p style="text-align:center; color:#888; margin-top: 50px;">No messages yet.</p>';
                     }
@@ -302,11 +462,39 @@
             }
         }
 
+        function logout() {
+            if (ws) {
+                ws.close();
+            }
+            document.getElementById('chat-layout').style.display = 'none';
+            document.getElementById('auth-section').style.display = 'block';
+
+            myName = "";
+            myToken = "";
+            currentReceiver = "";
+            currentGroupId = 0;
+            document.getElementById('msg-box').innerHTML = '';
+        }
+
         function startWS(token) {
             ws = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
 
+            ws.onopen = () => {
+                console.log("Connected to server");
+                document.getElementById('my-profile-name').innerText = "Logged in as: " + myName;
+
+                while (offlineQueue.length > 0) {
+                    const savedPayload = offlineQueue.shift();
+                    ws.send(JSON.stringify(savedPayload));
+                }
+
+                fetchUsers();
+            };
+
             ws.onmessage = (e) => {
                 const data = JSON.parse(e.data);
+
+                console.log("⚡ Live WS Message:", data);
 
                 if (data.type === "status") {
                     updateUserStatus(data.username, data.content);
@@ -314,48 +502,72 @@
                     if (data.username === currentReceiver) {
                         showTypingIndicator(data.username);
                     }
-                }
-                // --- الإضافات الجديدة الخاصة بالصح والصحين ---
-                else if (data.type === "server_ack") {
-                    // السيرفر استلمها وحفظها: غير الحالة إلى "صح واحد ✓"
+                } else if (data.type === "server_ack") {
                     const msgDiv = document.getElementById(`msg-${data.id}`);
                     if (msgDiv) {
                         const tickSpan = msgDiv.querySelector('.tick');
                         if (tickSpan) tickSpan.innerText = "✓";
                     }
                 } else if (data.type === "delivery_ack") {
-                    // الطرف الآخر استلمها: غير الحالة إلى "صحين ✓✓" بلون أزرق
                     const msgDiv = document.getElementById(`msg-${data.id}`);
                     if (msgDiv) {
                         const tickSpan = msgDiv.querySelector('.tick');
                         if (tickSpan) {
                             tickSpan.innerText = "✓✓";
-                            tickSpan.style.color = "#53bdeb"; // أزرق واتساب
+                            tickSpan.style.color = "#53bdeb";
                             tickSpan.style.fontWeight = "bold";
                         }
                     }
                 } else if (data.type === "chat") {
-                    if (data.username === myName) {
-                        // نتجاهل الرسالة لأننا أضفناها مسبقاً للشاشة لحظة الإرسال
-                        return;
-                    }
+                    if (data.username === myName) return;
 
-                    // إذا استلمنا رسالة من شخص آخر (بغض النظر عما إذا كنا فاتحين الشات معه أم لا)
-                    // نرسل فوراً تأكيد "أننا استلمناها" لكي تظهر عنده صحين
-                    if (data.id) {
-                        ws.send(JSON.stringify({
-                            type: "delivery_ack",
-                            id: data.id,
-                            receiver_username: data.username
-                        }));
-                    }
+                    if (data.group_id && data.group_id !== 0) {
+                        if (data.group_id === currentGroupId) {
+                            appendMessage(data);
+                        }
+                    } else {
+                        if (!document.getElementById(`user-${data.username}`)) {
+                            fetchUsers();
+                        }
 
-                    if (data.username === currentReceiver) {
-                        hideTypingIndicator();
-                        appendMessage(data);
+                        if (data.id) {
+                            ws.send(JSON.stringify({
+                                type: "delivery_ack",
+                                id: data.id,
+                                receiver_username: data.username
+                            }));
+                        }
+
+                        if (data.username === currentReceiver) {
+                            hideTypingIndicator();
+                            appendMessage(data);
+                        }
                     }
                 }
             };
+
+            ws.onclose = () => {
+                console.log("Disconnected from server");
+                const profileName = document.getElementById('my-profile-name');
+                if (!profileName.innerText.includes("Offline")) {
+                    profileName.innerText = "Logged in as: " + myName + " (Offline - Reconnecting...)";
+                }
+                document.querySelectorAll('.status-indicator').forEach(el => el.innerText = "");
+
+                setTimeout(() => {
+                    if (myToken !== "") {
+                        startWS(myToken);
+                    }
+                }, 3000);
+            };
+
+            setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: "ping"
+                    }));
+                }
+            }, 30000);
         }
 
         function updateUserStatus(username, status) {
@@ -367,11 +579,13 @@
                 } else {
                     indicator.innerText = "";
                 }
+            } else if (status === "online") {
+                fetchUsers();
             }
         }
 
         function notifyTyping() {
-            if (ws && ws.readyState === WebSocket.OPEN && currentReceiver) {
+            if (ws && ws.readyState === WebSocket.OPEN && currentReceiver !== "") {
                 ws.send(JSON.stringify({
                     type: "typing",
                     receiver_username: currentReceiver
@@ -398,27 +612,35 @@
         function sendMsg() {
             const msgInput = document.getElementById('msgInput');
 
-            if (msgInput.value && currentReceiver && ws && ws.readyState === WebSocket.OPEN) {
-                // توليد ID فريد للرسالة لنتمكن من تتبعها
-                const uniqueId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+            if (msgInput.value) {
+                if (currentReceiver === "" && currentGroupId === 0) return;
 
+                const uniqueId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
                 const payload = {
                     id: uniqueId,
                     type: "chat",
                     content: msgInput.value,
-                    receiver_username: currentReceiver
+                    username: myName
                 };
 
-                // نظهرها على الشاشة فوراً مع أيقونة 🕒 (جاري الإرسال)
-                payload.username = myName;
+                if (currentGroupId !== 0) {
+                    payload.group_id = currentGroupId;
+                } else {
+                    payload.receiver_username = currentReceiver;
+                }
+
                 appendMessage(payload, "🕒");
 
-                ws.send(JSON.stringify(payload));
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(payload));
+                } else {
+                    offlineQueue.push(payload);
+                }
+
                 msgInput.value = '';
             }
         }
 
-        // تم التعديل لدعم رسم الـ (tick) وإعطاء ID للرسالة
         function appendMessage(data, tick = "") {
             const box = document.getElementById('msg-box');
             if (document.querySelector('#msg-box p')) box.innerHTML = '';
@@ -429,13 +651,12 @@
             if (data.username === myName) {
                 div.className = `msg me`;
 
-                // تحديد شكل الصح بناءً على الحالة القادمة من السيرفر
                 let tickIcon = "✓";
                 let tickColor = "#999";
 
                 if (data.status === "delivered" || tick === "✓✓") {
                     tickIcon = "✓✓";
-                    tickColor = "#53bdeb"; // أزرق
+                    tickColor = "#53bdeb";
                 } else if (tick === "🕒") {
                     tickIcon = "🕒";
                 }

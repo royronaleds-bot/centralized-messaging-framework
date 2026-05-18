@@ -15,10 +15,16 @@ func main() {
 	database.Connect()
 
 	r := mux.NewRouter()
+
 	// مسار جلب الرسائل القديمة (محمي بالمصادقة)
 	r.HandleFunc("/messages", middleware.AuthMiddleware(handlers.GetMessages)).Methods("GET")
 	// مسار جلب قائمة المستخدمين (محمي بالمصادقة)
 	r.HandleFunc("/users", middleware.AuthMiddleware(handlers.GetUsers)).Methods("GET")
+
+	// 🛠️ --- المسارات الجديدة الخاصة بالمجموعات (محمية بالمصادقة) ---
+	r.HandleFunc("/groups", middleware.AuthMiddleware(handlers.GetGroups)).Methods("GET")
+	r.HandleFunc("/groups/join", middleware.AuthMiddleware(handlers.JoinGroup)).Methods("POST")
+
 	// تم تعديل الأسماء لتطابق الدوال الموجودة في auth.go
 	r.HandleFunc("/register", handlers.RegisterHandler).Methods("POST")
 	r.HandleFunc("/login", handlers.LoginHandler).Methods("POST")
