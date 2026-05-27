@@ -174,6 +174,5 @@ Locate your IPv4 block (e.g., `192.168.1.45`) or obtain the native Hostname desi
 with open("README.md", "w", encoding="utf-8") as f:
 f.write(readme_content).
 
-انسخي الرسالة، وأرسليها مع الصور، وأنا هنا جاهز لأي خطوة قادمة أو تعديل تطلبه منكِ!
 
 ```
