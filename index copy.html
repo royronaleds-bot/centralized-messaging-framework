@@ -467,8 +467,7 @@
             const p = document.getElementById('pass').value;
 
             try {
-                // 🌟 تحديث ديناميكي للرابط يتبع المستضيف الحالي تلقائياً
-                const res = await fetch(`http://${window.location.host}/${type}`, {
+                const res = await fetch(`http://localhost:8080/${type}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -507,8 +506,7 @@
             if (!name) return;
 
             try {
-                // 🌟 تحديث ديناميكي للرابط
-                const res = await fetch(`http://${window.location.host}/groups/join?token=${myToken}`, {
+                const res = await fetch(`http://localhost:8080/groups/join?token=${myToken}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -531,8 +529,7 @@
 
         async function fetchGroups() {
             try {
-                // 🌟 تحديث ديناميكي للرابط
-                const res = await fetch(`http://${window.location.host}/groups?token=${myToken}`);
+                const res = await fetch(`http://localhost:8080/groups?token=${myToken}`);
                 if (res.ok) {
                     const groups = await res.json();
                     const list = document.getElementById('group-list');
@@ -589,8 +586,7 @@
             hideTypingIndicator();
 
             try {
-                // 🌟 تحديث ديناميكي للرابط
-                const res = await fetch(`http://${window.location.host}/messages?token=${myToken}&group_id=${groupId}&offset=${currentOffset}`);
+                const res = await fetch(`http://localhost:8080/messages?token=${myToken}&group_id=${groupId}&offset=${currentOffset}`);
                 if (res.ok) {
                     const messages = await res.json();
                     const box = document.getElementById('msg-box');
@@ -612,8 +608,7 @@
 
         async function fetchUsers() {
             try {
-                // 🌟 تحديث ديناميكي للرابط
-                const res = await fetch(`http://${window.location.host}/users?token=${myToken}`);
+                const res = await fetch(`http://localhost:8080/users?token=${myToken}`);
                 if (res.ok) {
                     const users = await res.json();
                     const list = document.getElementById('user-list');
@@ -680,8 +675,7 @@
             }
 
             try {
-                // 🌟 تحديث ديناميكي للرابط
-                const res = await fetch(`http://${window.location.host}/messages?token=${myToken}&with=${receiver}&offset=${currentOffset}`);
+                const res = await fetch(`http://localhost:8080/messages?token=${myToken}&with=${receiver}&offset=${currentOffset}`);
                 if (res.ok) {
                     const messages = await res.json();
                     const box = document.getElementById('msg-box');
@@ -720,10 +714,9 @@
                 isLoadingOldMessages = true;
                 let prevHeight = this.scrollHeight;
 
-                // 🌟 تحديث ديناميكي للرابط داخل حدث التمرير للرسائل القديمة
                 let url = currentGroupId !== 0 ?
-                    `http://${window.location.host}/messages?token=${myToken}&group_id=${currentGroupId}&offset=${currentOffset}` :
-                    `http://${window.location.host}/messages?token=${myToken}&with=${currentReceiver}&offset=${currentOffset}`;
+                    `http://localhost:8080/messages?token=${myToken}&group_id=${currentGroupId}&offset=${currentOffset}` :
+                    `http://localhost:8080/messages?token=${myToken}&with=${currentReceiver}&offset=${currentOffset}`;
 
                 try {
                     const res = await fetch(url);
@@ -773,8 +766,7 @@
         }
 
         function startWS(token) {
-            // 🌟 تحديث ديناميكي حاسم لرابط الويب سوكيت يربط السيرفر تلقائياً بأي جهاز
-            ws = new WebSocket(`ws://${window.location.host}/ws?token=${token}`);
+            ws = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
 
             ws.onopen = () => {
                 while (offlineQueue.length > 0) {
