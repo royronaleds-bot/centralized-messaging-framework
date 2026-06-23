@@ -1,178 +1,125 @@
-```python
-readme_content = """# CoreHub: Centralized Concurrency-Driven Messaging Framework
+# CoreHub — Engineering a Production-Ready Real-Time System
 
-An enterprise-grade, high-concurrency real-time messaging framework engineered using a centralized Client-Server architecture. Built with **Go (Golang)**, **PostgreSQL**, and **WebSockets**, CoreHub is architected to deliver ultra-low latency data routing, persistent multi-session message state preservation, and dynamic network discoverability with a highly optimized memory footprint.
+<div align="center">
+  <img src="https://img.icons8.com/color/120/000000/server.png" alt="CoreHub Logo"/>
+  <p><b>A high-performance, real-time messaging and administration platform built with Go (Golang) and PostgreSQL.</b></p>
+</div>
 
 ---
 
-## 🏗️ System Architecture & Concurrency Model
+## 🎯 The Philosophy
 
-CoreHub follows a strictly decoupled **Centralized Client-Server Model**. The Go backend acts as the authoritative communication hub controlling session state, user authentication, security isolation, relational database persistence, and synchronized web socket connection topologies.
+CoreHub is not just another chat application; it is a case study in **Backend Software Engineering**. The primary goal of this project was to demonstrate how to design, architect, and evolve a scalable real-time system using **Clean Architecture principles**, **Concurrency (Goroutines)**, and **Vanilla Reactive UI**. The emphasis is on *how* the system operates under the hood—handling WebSocket multi-session edge cases, ensuring real-time data consistency, and memory management—rather than merely stacking features.
 
+---
 
-```
+## 🏗️ System Architecture
+
+CoreHub strictly enforces a layered architecture. The frontend UI knows nothing about the database, and the business logic is entirely decoupled into modular handlers.
 
 ```text
-README.md written successfully.
-
-
+📱 Presentation Layer (Vanilla JS / HTML / CSS)
+   ↓ listens to / triggers
+🌐 API & Routing Layer (Gorilla Mux / JWT Middleware)
+   ↓ calls
+⚙️ Business Logic Layer (Isolated Go Handlers / WebSocket Engine)
+   ↓ communicates with
+🗄️ Data Layer (PostgreSQL / Parameterized Queries)
 ```
 
-```
-   ┌────────────────────────┐               ┌────────────────────────┐
-   │   Client Laptop (A)    │               │   Client Laptop (B)    │
-   │  (Vanilla HTML/CSS/JS) │               │  (Vanilla HTML/CSS/JS) │
-   └───────────┬────────────┘               └───────────┬────────────┘
-               │                                        │
-               │  Persistent Full-Duplex TCP Link       │
-               │  (Authenticated WebSocket - WSS/WS)    │
-               ▼                                        ▼
- ======================================================================
-                     CENTRAL SERVER BACKEND (GO / GOLANG)
- ======================================================================
- │                                                                    │
- │  ┌──────────────────┐      Goroutine Pool      ┌────────────────┐  │
- │  │  JWT Auth & TLS  ├─────────────────────────►│  Central Hub   │  │
- │  │  Security Layer  │                          │ (Presence Map) │  │
- │  └──────────────────┘                          └───────┬────────┘  │
- │                                                        │           │
- │                                       Go Channels      │           │
- │                                   ┌────────────────────┘           │
- │                                   ▼                                │
- │                           ┌──────────────┐                         │
- │                           │  Broadcast   │                         │
- │                           │  Engine      │                         │
- │                           └──────┬───────┘                         │
- ===================================│==================================
-                                    │ Relational Persistence
-                                    ▼
-                       ┌────────────────────────┐
-                       │   PostgreSQL Database  │
-                       │   (Persistent Storage) │
-                       └────────────────────────┘
-
-```
-
-```
-
-### 1. Concurrency Management
-* **Goroutines:** Unlike traditional threaded environments where each TCP socket consumes heavy OS-level thread stacks, CoreHub spawns ultra-lightweight Go runtimes (Goroutines) consuming only a few kilobytes per connection. This allows the framework to easily scale to thousands of simultaneous connections.
-* **Go Channels:** Active messages are handled asynchronously via thread-safe FIFO data channels (`chan Message`). This completely decouples message reading from message writing loops, avoiding I/O bottlenecks.
-* **RWMutex Synchronization:** Concurrent maps holding active WebSocket context pointers are shielded using synchronized mutual exclusion locks (`sync.RWMutex`). This systematically mitigates **Race Conditions** during sudden connection drops or simultaneous multi-branch message spikes.
+### Core Architectural Principles:
+*   **Separation of Concerns:** Authentication, real-time chat, group management, and file uploads are abstracted into dedicated, isolated Go files (e.g., `auth.go`, `websocket.go`, `upload.go`).
+*   **Zero-Dependency Frontend:** The UI is built using pure Vanilla JavaScript and CSS. No heavy frameworks were used, ensuring lightning-fast load times and a highly reactive DOM manipulation engine.
+*   **Secure by Design:** Hardcoded secrets are eliminated. Passwords are cryptographically hashed using `bcrypt`, and endpoints are secured via JWT Middlewares.
 
 ---
 
-## ✨ Framework Features & Requirements Mapping
+## 🔬 Engineering Masterpieces (Under the Hood)
 
-The system natively implements all standard and advanced components defined within the official project specifications:
+CoreHub tackles real-world distributed system challenges with innovative solutions:
 
-### 1. Security & Cryptographic Identity Management
-* **Cryptographic Hashing:** Passwords are mathematically hashed with a highly secure salt using **Bcrypt** before committing to the `users` relational index. Plaintext credentials never exist inside the persistent layer.
-* **Stateful Handshake Verification:** User sessions are verified via stateless **JWT (JSON Web Tokens)**. The token is issued upon successful login and seamlessly parsed during the WebSocket compilation handshake to validate access rights.
+### 1. The Multi-Session Presence Engine (Solving the "Ghost Offline" Bug)
+Relying solely on a single WebSocket connection drop to mark a user as "Offline" leads to inaccurate data if a user is logged in from multiple devices (e.g., Mobile and Laptop).
+*   **The Solution:** Implemented a smart Goroutine session-checker. When a socket drops, the server locks the state using `sync.RWMutex`, scans the active connections map, and verifies if the user has other active instances before broadcasting an "Offline" status to the network.
 
-### 2. Advanced Real-Time Chat Engine & Interactive UX
-* **Live Presence Architecture:** Real-time state machines seamlessly track client connectivity. When a TCP connection drops or opens, the server captures the lifecycle hook and dynamically broadcasts `online`/`offline` state changes to all corresponding network nodes.
-* **Database-Bypassing Ephemeral Notifications:** Typing states (*"User is typing..."*) are explicitly routed as ephemeral packet frames that bypass the database engine entirely, reducing disk I/O overhead and accelerating immediate delivery.
-* **Multi-State Delivery Receipts:** Complete tracking of the message lifecycle via asynchronous acknowledgment protocols:
-  * `🕒 Queued/Pending`: Message produced and held inside local volatile storage (Offline Queue).
-  * `✓ Sent`: Message accepted by the central hub and successfully committed to PostgreSQL.
-  * `✓✓ Delivered`: Acknowledged by the target node's active layout engine.
-  * `✓✓ Read (Cyan)`: Explicit read acknowledgement dispatched automatically when the user actively mounts the corresponding viewport.
+### 2. Deep-System Admin Dashboard
+Standard dashboards only read database rows. CoreHub's dashboard talks directly to the operating system's hardware.
+*   **The Solution:** Integrated Go's `runtime` package to fetch and broadcast live server metrics. The Admin interface dynamically renders Active Goroutines, actual RAM memory allocation, and CPU Core utilization in real-time.
 
-### 3. Isolated Group Routing (Rooms)
-* Group channels are fully managed inside synchronized server memory structures. Messages addressed to a group ID query a cached membership relation map, ensuring data frames are distributed exclusively to matching active connections.
-
-### 4. Network Health Orchestration & Local Discoverability
-* **Heartbeat Protocol (Ping/Pong):** Prevents memory leaks and zombie sockets by enforcing a strict 60-second read deadline on the server. Clients push silent ping events every 30 seconds to maintain connection health across intermediate NAT routers.
-* **Dynamic Network Discovery:** Outfitted with an elegant frontend abstraction layer utilizing `window.location.host`. This replaces rigid `localhost` hooks with dynamic contextual address binding. It allows the centralized instance to operate smoothly over a Local Area Network (LAN) or wireless Hotspot, adapting instantly to dynamically assigned network IP blocks or local mDNS Hostnames (`.local`).
+### 3. mDNS Local Area Network (LAN) Resolution
+To ensure a smooth testing and deployment environment without exposing explicit IP addresses or ports.
+*   **The Solution:** Configured the Go server to bind to the default Port `80` and leverage native mDNS capabilities. Users can instantly connect to the application over the network using `http://<machine-name>.local` without any extra configurations.
 
 ---
 
-## 🗄️ Relational Database Schema
+## 📱 Features & Capabilities
 
-CoreHub utilizes **PostgreSQL** for strict transactional integrity and structural historical preservation. The relational model is implemented as follows:
-
-```sql
--- Users Entity Index
-CREATE TABLE users (
-    username TEXT PRIMARY KEY,
-    password TEXT NOT NULL
-);
-
--- Groups/Rooms Index
-CREATE TABLE groups (
-    id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL
-);
-
--- Group Membership Resolution Mapping (Many-to-Many Bridge)
-CREATE TABLE group_members (
-    group_id INT REFERENCES groups(id) ON DELETE CASCADE,
-    username TEXT REFERENCES users(username) ON DELETE CASCADE,
-    PRIMARY KEY (group_id, username)
-);
-
--- Transactional Historical Message Store
-CREATE TABLE messages (
-    id SERIAL PRIMARY KEY,
-    username TEXT NOT NULL REFERENCES users(username),
-    receiver_username TEXT REFERENCES users(username), -- Nullable for group rooms
-    group_id INT DEFAULT 0,                            -- 0 specifies peer-to-peer chat
-    content TEXT NOT NULL,
-    client_msg_id TEXT UNIQUE,                         -- Enforces idempotent packet ingestion
-    status TEXT DEFAULT 'sent',                        -- [sent, delivered, read]
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP     -- System clock timestamp for chronological sorting
-);
-
-```
+| Category | Features | Tech Stack |
+| :--- | :--- | :--- |
+| **Messaging** | 1-on-1 Real-time chat, Group Chat, Read receipts (Ticks), Instant delivery | Gorilla WebSockets + Go Channels |
+| **Admin Controls** | Live Server Stats, Instant User Banning/Unbanning, System-wide Broadcasts | Go `runtime` + Secure JWT roles |
+| **Media** | File attachments, Inline image rendering, Dynamic file downloads | Go `multipart/form-data` + Local I/O |
+| **Presence** | Reliable Online/Offline tracking, Multi-device session awareness | Concurrent Maps + `sync.RWMutex` |
+| **Security** | JWT Authentication, Bcrypt Password Hashing, Route Protection | `golang-jwt/jwt/v5` + `x/crypto/bcrypt` |
 
 ---
 
-## 🚀 Execution & Deployment Walkthrough
+## ⛺ The Agile Journey (Sprints)
 
-### 1. Database Initialization
+This project was built iteratively over multiple Sprints, reflecting a professional SDLC:
 
-Ensure PostgreSQL is up and running, and configure your target connection parameters inside `database/db.go`. Execute the SQL schema script provided above to set up the corresponding indices.
+*   **Sprint 1:** Architecture foundation, Database schema design (PostgreSQL), and JWT Auth setup.
+*   **Sprint 2:** The Communication Layer (WebSocket engine, 1-on-1 message delivery).
+*   **Sprint 3:** Group Chat implementation and real-time user discovery.
+*   **Sprint 4:** Advanced Messaging (Delivery/Read ticks, File Uploads handling).
+*   **Sprint 5:** System Behavior (Presence Engine, Offline queues, Multi-session logic).
+*   **Sprint 6:** The Admin Panel (Quarantine zones, Banning system, Broadcasts, Live Dashboard).
+*   **Sprint 7:** Production Polish (Clean Architecture refactoring, Code Splitting, Theming).
 
-### 2. Launching the Central Hub Backend
+---
 
-Compile and launch the Go server framework directly from your primary repository directory:
+## 🛠️ Tech Stack
 
+*   **Backend:** Go (Golang)
+*   **Router & Sockets:** `gorilla/mux`, `gorilla/websocket`
+*   **Database:** PostgreSQL (`lib/pq`)
+*   **Frontend:** HTML5, CSS3, Vanilla JavaScript
+*   **Security:** `golang.org/x/crypto/bcrypt`, `github.com/golang-jwt/jwt/v5`
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+1.  Go (>= 1.20) installed on your machine.
+2.  PostgreSQL installed and running.
+3.  A database named `corehub_db`.
+
+### Installation
+1. Clone the repository:
 ```bash
-go run main.go
-
-```
-
-The console will log server assembly initialization:
-`Successfully connected to database!`
-`🚀 Server launched on: http://localhost:8080`
-
-### 3. Dynamic Multi-Device Cross-Network Testing
-
-Thanks to the integration of dynamic hostname binding, deploying the framework across various laptop terminals inside a branch setup (e.g., simulating connectivity across Latakia, Jableh, Baniyas, or Tartus regional node infrastructures) requires zero manual asset modifications:
-
-1. Connect all target computing nodes (Laptops) to a single shared network point or local hot-spot connection.
-2. Determine the authoritative server's current address parameter. You can locate this via your OS networking panel or using the terminal:
+   git clone [https://github.com/your-username/CoreHub.git](https://github.com/your-username/CoreHub.git)
+   ```
+2. Install Go dependencies:
 ```bash
-# Windows Command Prompt
-ipconfig
+   go mod tidy
+   ```
+3. Set your environment variables (or use the defaults in `database.go`):
+```bash
+   DB_USER=postgres
+   DB_PASSWORD=yourpassword
+   DB_NAME=corehub_db
+   ```
+4. Run the server:
+```bash
+   go run main.go
+   ```
+5. Access the application on `http://localhost` or `http://<your-pc-name>.local`.
 
-```
+---
 
+## 👨‍💻 Author
 
-Locate your IPv4 block (e.g., `192.168.1.45`) or obtain the native Hostname designation (e.g., `DESKTOP-823OF7G`).
-3. Distribute the network access parameter to your testing nodes. They can simply input the following into their browser location bar:
-```
-[http://192.168.1.45:8080](http://192.168.1.45:8080)   OR   [http://DESKTOP-823OF7G.local:8080](http://DESKTOP-823OF7G.local:8080)
-
-```
-
-
-4. The central Go server instantly serves the compiled frontend. The application dynamics will instantly bind to the host address configuration, seamlessly executing WebSocket pipelines across all distributed multi-node devices.
-"""
-
-with open("README.md", "w", encoding="utf-8") as f:
-f.write(readme_content).
-
-
-```
+**Ali Ahmad**  
+*Software Engineer*  
+Passionate about building scalable, maintainable, and highly resilient backend systems.
