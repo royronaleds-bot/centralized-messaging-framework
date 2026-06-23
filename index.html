@@ -4,342 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <title>CoreHub Chat</title>
-    <style>
-        /* 🌟 متغيرات الألوان (Theme Variables) - أحمر دم الغزال */
-        
-         :root {
-            --primary-color: #8A1538;
-            --primary-hover: #6b0f2a;
-            --bg-color: #f0f2f5;
-            --chat-bg: #efeae2;
-            --msg-me-bg: #fce8e8;
-            /* أحمر فاتح جداً لرسائلك */
-            --msg-others-bg: #ffffff;
-            --text-dark: #333;
-            --text-light: #888;
-            --read-tick: #00BFFF;
-            /* أزرق فاتح لعلامة القراءة */
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-color);
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-            margin: 0;
-        }
-        
-        .card {
-            background: white;
-            width: 850px;
-            max-width: 95vw;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        #auth-section {
-            padding: 50px;
-            text-align: center;
-        }
-        
-        #auth-section h2 {
-            color: var(--primary-color);
-            margin-bottom: 20px;
-        }
-        
-        #chat-layout {
-            display: none;
-            flex-direction: row;
-            height: 600px;
-        }
-        
-        #sidebar {
-            width: 32%;
-            border-right: 1px solid #ddd;
-            background: #fff;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .sidebar-header {
-            padding: 15px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #ddd;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: var(--primary-color);
-        }
-        
-        .section-title {
-            font-size: 12px;
-            padding: 8px 15px;
-            background: #f8f9fa;
-            color: var(--text-light);
-            font-weight: bold;
-            border-bottom: 1px solid #eee;
-        }
-        
-        #user-list,
-        #group-list {
-            overflow-y: auto;
-        }
-        
-        #group-list {
-            max-height: 180px;
-        }
-        
-        #user-list {
-            flex: 1;
-        }
-        
-        .user-item {
-            padding: 12px 15px;
-            border-bottom: 1px solid #f5f5f5;
-            cursor: pointer;
-            transition: background 0.2s;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        
-        .user-item:hover {
-            background: #fcf4f4;
-        }
-        
-        .user-item.active {
-            background: #f4dada;
-            border-left: 4px solid var(--primary-color);
-        }
-        
-        .user-item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            font-weight: bold;
-            color: var(--text-dark);
-        }
-        
-        .unread-badge {
-            background-color: var(--primary-color);
-            color: white;
-            border-radius: 12px;
-            padding: 2px 7px;
-            font-size: 11px;
-            font-weight: bold;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-            min-width: 10px;
-            text-align: center;
-        }
-        
-        .last-msg-preview {
-            font-size: 12px;
-            color: var(--text-light);
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .preview-text {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 80%;
-        }
-        
-        #main-chat {
-            width: 68%;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-        
-        #chat-header {
-            padding: 15px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #ddd;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: var(--text-dark);
-        }
-        
-        #msg-box {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            background-color: var(--chat-bg);
-            background-image: radial-gradient(#d5caba 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
-        
-        #empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            text-align: center;
-            color: var(--text-light);
-        }
-        
-        #empty-state .icon {
-            font-size: 60px;
-            margin-bottom: 15px;
-            opacity: 0.5;
-        }
-        
-        .msg {
-            margin: 5px 0;
-            padding: 10px 14px;
-            border-radius: 15px;
-            font-size: 14px;
-            max-width: 70%;
-            word-wrap: break-word;
-            position: relative;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .me {
-            align-self: flex-end;
-            background: var(--msg-me-bg);
-            border-bottom-right-radius: 2px;
-        }
-        
-        .others {
-            align-self: flex-start;
-            background: var(--msg-others-bg);
-            border-bottom-left-radius: 2px;
-        }
-        
-        #typing-indicator {
-            padding: 0 20px;
-            color: var(--text-light);
-            font-size: 12px;
-            font-style: italic;
-            min-height: 20px;
-            background: var(--chat-bg);
-        }
-        
-        .chat-controls {
-            display: flex;
-            padding: 15px;
-            background: #f0f0f0;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        input[type="text"],
-        input[type="password"] {
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            outline: none;
-            font-size: 14px;
-            transition: border 0.3s;
-        }
-        
-        input[type="text"]:focus,
-        input[type="password"]:focus {
-            border-color: var(--primary-color);
-        }
-        
-        .chat-controls input {
-            flex: 1;
-        }
-        
-        button {
-            padding: 10px 20px;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
-        }
-        
-        button:hover {
-            background: var(--primary-hover);
-        }
-        
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        
-        .add-group-box {
-            display: flex;
-            padding: 10px;
-            gap: 5px;
-            background: #fff;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .add-group-box input {
-            flex: 1;
-            padding: 8px 12px;
-            border-radius: 15px;
-            border: 1px solid #ccc;
-            font-size: 13px;
-        }
-        
-        .add-group-box button {
-            padding: 8px 12px;
-            border-radius: 15px;
-            font-size: 12px;
-        }
-        
-         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        
-         ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        
-         ::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-        }
-        
-         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.4);
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-
     <div class="card">
         <div id="auth-section">
             <h2>CoreHub</h2>
             <div style="display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 0 auto;">
                 <input type="text" id="user" placeholder="Username">
                 <input type="password" id="pass" placeholder="Password">
+
+                <button type="button" id="showAdminBtn" onclick="document.getElementById('secret').style.display='block'; this.style.display='none';" style="background: transparent; color: #b8860b; border: 1px solid #b8860b; font-size: 11px; padding: 5px;">👑 Register as Admin?</button>
+                <input type="password" id="secret" placeholder="Enter Admin Secret Key..." style="display:none; border: 2px solid gold; background: #fffdf5;">
+
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
                     <button onclick="auth('login')" style="flex: 1;">Login</button>
                     <button onclick="auth('register')" style="background:#333; flex: 1;">Register</button>
@@ -351,7 +29,11 @@
             <div id="sidebar">
                 <div class="sidebar-header">
                     <span id="my-profile-name">Profile</span>
-                    <button onclick="logout()" style="padding: 5px 12px; font-size: 12px; background: #dc3545; border-radius: 15px;">Logout</button>
+                    <div style="display: flex; gap: 5px;">
+                        <button id="broadcastBtn" onclick="openBroadcastModal()" style="display:none; padding: 5px 8px; font-size: 11px; background: #28a745; border-radius: 15px;">📢 Broadcast</button>
+                        <button id="dashboardBtn" onclick="openDashboard()" style="display:none; padding: 5px 8px; font-size: 11px; background: #17a2b8; border-radius: 15px;">📊 Stats</button>
+                        <button onclick="logout()" style="padding: 5px 12px; font-size: 12px; background: #dc3545; border-radius: 15px;">Logout</button>
+                    </div>
                 </div>
 
                 <div class="add-group-box">
@@ -363,16 +45,24 @@
                 <div id="group-list"></div>
 
                 <div class="section-title">USERS</div>
-                <div style="padding: 10px; background: #fff; border-bottom: 1px solid #eee;">
-                    <input type="text" id="userSearchInput" placeholder="🔍 Search users..." onkeyup="filterUsers()" style="width: 100%; padding: 8px 12px; border-radius: 15px; border: 1px solid #ddd; font-size: 12px; box-sizing: border-box; outline: none;">
+                <div style="padding: 10px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color);">
+                    <input type="text" id="userSearchInput" placeholder="🔍 Search users..." onkeyup="filterUsers()" style="width: 100%; padding: 8px 12px; border-radius: 15px; border: 1px solid var(--border-color); font-size: 12px; box-sizing: border-box; outline: none;">
                 </div>
                 <div id="user-list"></div>
+
+                <div id="banned-section" style="display:none; flex-direction: column;">
+                    <div class="section-title" style="color: #dc3545; border-top: 1px solid var(--border-color);">🚫 BANNED USERS</div>
+                    <div id="banned-list"></div>
+                </div>
             </div>
 
             <div id="main-chat">
                 <div id="chat-header">
                     <span id="chat-title">CoreHub Messaging</span>
-                    <button id="clearChatBtn" onclick="clearLocalChat()" style="display:none; background: #f8f9fa; color: #dc3545; border: 1px solid #dc3545; padding: 5px 10px; font-size: 12px;">🗑️ Clear Screen</button>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <span id="themeToggle" onclick="toggleTheme()" style="cursor: pointer; font-size: 18px;" title="Toggle Dark/Light Mode">🌙</span>
+                        <button id="clearChatBtn" onclick="clearLocalChat()" style="display:none; background: #fff0f0; color: #dc3545; border: 1px solid #dc3545; padding: 5px 10px; border-radius: 15px; font-size: 11px;">🗑️ Clear Chat</button>
+                    </div>
                 </div>
 
                 <div id="msg-box">
@@ -386,6 +76,18 @@
                 <div id="typing-indicator"></div>
 
                 <div class="chat-controls">
+                    <label for="fileInput" style="cursor: pointer; font-size: 22px; transition: transform 0.2s;" title="Attach File" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">📎</label>
+                    <input type="file" id="fileInput" style="display: none;" onchange="uploadFile()">
+
+                    <span onclick="toggleEmojiPicker()" style="cursor: pointer; font-size: 22px; transition: transform 0.2s;" title="Emojis" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">🙂</span>
+
+                    <div id="emoji-picker">
+                        <span class="emoji-btn" onclick="insertEmoji('😀')">😀</span><span class="emoji-btn" onclick="insertEmoji('😂')">😂</span>
+                        <span class="emoji-btn" onclick="insertEmoji('😍')">😍</span><span class="emoji-btn" onclick="insertEmoji('😎')">😎</span>
+                        <span class="emoji-btn" onclick="insertEmoji('👍')">👍</span><span class="emoji-btn" onclick="insertEmoji('🙌')">🙌</span>
+                        <span class="emoji-btn" onclick="insertEmoji('🔥')">🔥</span><span class="emoji-btn" onclick="insertEmoji('❤️')">❤️</span>
+                    </div>
+
                     <input type="text" id="msgInput" placeholder="Type a message..." disabled oninput="notifyTyping()">
                     <button id="sendBtn" onclick="sendMsg()" disabled>Send</button>
                 </div>
@@ -393,661 +95,34 @@
         </div>
     </div>
 
-    <script>
-        let ws;
-        let myName = "";
-        let myToken = "";
-        let currentReceiver = "";
-        let currentGroupId = 0;
-        let typingTimeout;
-
-        let offlineQueue = [];
-        let currentOffset = 0;
-        let isLoadingOldMessages = false;
-        let hasMoreMessages = true;
-        const msgLimit = 50;
-        let unreadCounts = {};
-
-        // 🌟 دالة البحث الحي في قائمة المستخدمين
-        function filterUsers() {
-            let filter = document.getElementById('userSearchInput').value.toLowerCase();
-            let userItems = document.querySelectorAll('#user-list .user-item');
-
-            userItems.forEach(item => {
-                let usernameSpan = item.querySelector('.user-item-header span');
-                if (usernameSpan) {
-                    let username = usernameSpan.innerText.replace('👤 ', '').toLowerCase();
-                    if (username.includes(filter)) {
-                        item.style.display = 'flex';
-                    } else {
-                        item.style.display = 'none';
-                    }
-                }
-            });
-        }
-
-        // 🌟 اختصارات لوحة المفاتيح
-        document.getElementById('user').addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowDown' || e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('pass').focus();
-            }
-        });
-
-        document.getElementById('pass').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                auth('login');
-            }
-        });
-
-        document.getElementById('msgInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendMsg();
-            }
-        });
-
-        document.getElementById('groupNameInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                joinGroup();
-            }
-        });
-
-        // 🌟 دالة مسح الشاشة محلياً
-        function clearLocalChat() {
-            const box = document.getElementById('msg-box');
-            box.innerHTML = '<p style="text-align:center; color:#888; margin-top: 50px; font-size: 12px; background: rgba(255,255,255,0.7); padding: 5px; border-radius: 10px; width: fit-content; margin-left: auto; margin-right: auto;">Chat cleared from this device.</p>';
-            document.getElementById('msgInput').focus();
-        }
-
-        async function auth(type) {
-            const u = document.getElementById('user').value;
-            const p = document.getElementById('pass').value;
-
-            try {
-                // 🌟 تحديث ديناميكي للرابط يتبع المستضيف الحالي تلقائياً
-                const res = await fetch(`http://${window.location.host}/${type}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        username: u,
-                        password: p
-                    })
-                });
-
-                const data = await res.json();
-
-                if (res.ok) {
-                    if (type === 'register') return alert("Registration successful!");
-
-                    myName = u;
-                    myToken = data.token;
-
-                    document.getElementById('auth-section').style.display = 'none';
-                    document.getElementById('chat-layout').style.display = 'flex';
-                    document.getElementById('my-profile-name').innerText = "User: " + u;
-
-                    await fetchUsers();
-                    await fetchGroups();
-                    startWS(myToken);
-                } else {
-                    alert(data.message || "Authentication failed");
-                }
-            } catch (error) {
-                console.error("Auth error:", error);
-            }
-        }
-
-        async function joinGroup() {
-            const name = document.getElementById('groupNameInput').value;
-            if (!name) return;
-
-            try {
-                // 🌟 تحديث ديناميكي للرابط
-                const res = await fetch(`http://${window.location.host}/groups/join?token=${myToken}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        name: name
-                    })
-                });
-
-                if (res.ok) {
-                    document.getElementById('groupNameInput').value = '';
-                    fetchGroups();
-                } else {
-                    alert("Failed to join group");
-                }
-            } catch (e) {
-                console.error("Error joining group:", e);
-            }
-        }
-
-        async function fetchGroups() {
-            try {
-                // 🌟 تحديث ديناميكي للرابط
-                const res = await fetch(`http://${window.location.host}/groups?token=${myToken}`);
-                if (res.ok) {
-                    const groups = await res.json();
-                    const list = document.getElementById('group-list');
-                    list.innerHTML = '';
-
-                    if (groups && groups.length > 0) {
-                        groups.forEach(g => {
-                            const div = document.createElement('div');
-                            div.className = 'user-item';
-                            div.id = `group-${g.id}`;
-
-                            let previewText = g.last_message || "No messages yet";
-                            let timeText = g.last_time || "";
-
-                            div.innerHTML = `
-                                <div class="user-item-header">
-                                    <span>👥 ${g.name}</span>
-                                    <div class="indicators" style="display: flex; align-items: center; gap: 5px;"></div>
-                                </div>
-                                <div class="last-msg-preview">
-                                    <span class="preview-text">${previewText}</span>
-                                    <span style="font-size: 10px;">${timeText}</span>
-                                </div>
-                            `;
-                            div.onclick = () => loadGroupChat(g.id, g.name);
-                            list.appendChild(div);
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching groups:", error);
-            }
-        }
-
-        async function loadGroupChat(groupId, groupName) {
-            currentReceiver = "";
-            currentGroupId = groupId;
-            currentOffset = 0;
-            hasMoreMessages = true;
-
-            document.getElementById('chat-title').innerText = `${groupName}`;
-            document.getElementById('clearChatBtn').style.display = 'block';
-            document.getElementById('msgInput').disabled = false;
-            document.getElementById('sendBtn').disabled = false;
-            document.getElementById('msgInput').focus();
-
-            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`group-${groupId}`).classList.add('active');
-
-            unreadCounts[`group-${groupId}`] = 0;
-            let badge = document.querySelector(`#group-${groupId} .unread-badge`);
-            if (badge) badge.remove();
-
-            hideTypingIndicator();
-
-            try {
-                // 🌟 تحديث ديناميكي للرابط
-                const res = await fetch(`http://${window.location.host}/messages?token=${myToken}&group_id=${groupId}&offset=${currentOffset}`);
-                if (res.ok) {
-                    const messages = await res.json();
-                    const box = document.getElementById('msg-box');
-                    box.innerHTML = '';
-
-                    if (messages && messages.length > 0) {
-                        if (messages.length < msgLimit) hasMoreMessages = false;
-                        currentOffset += messages.length;
-                        messages.forEach(msg => appendMessage(msg));
-                    } else {
-                        box.innerHTML = '<div id="empty-state"><div class="icon">👋</div><p>Start the conversation in this group!</p></div>';
-                        hasMoreMessages = false;
-                    }
-                }
-            } catch (error) {
-                console.error("Error loading group chat:", error);
-            }
-        }
-
-        async function fetchUsers() {
-            try {
-                // 🌟 تحديث ديناميكي للرابط
-                const res = await fetch(`http://${window.location.host}/users?token=${myToken}`);
-                if (res.ok) {
-                    const users = await res.json();
-                    const list = document.getElementById('user-list');
-                    list.innerHTML = '';
-
-                    if (users && users.length > 0) {
-                        users.forEach(u => {
-                            const div = document.createElement('div');
-                            div.className = 'user-item';
-                            div.id = `user-${u.username}`;
-
-                            const dot = u.online ? "🟢" : "";
-                            let previewText = u.last_message || "No messages yet";
-                            let timeText = u.last_time || "";
-
-                            div.innerHTML = `
-                                <div class="user-item-header">
-                                    <span>👤 ${u.username}</span>
-                                    <div class="indicators" style="display: flex; align-items: center; gap: 5px;">
-                                        <span class="status-indicator" style="font-size:10px;">${dot}</span>
-                                    </div>
-                                </div>
-                                <div class="last-msg-preview">
-                                    <span class="preview-text">${previewText}</span>
-                                    <span style="font-size: 10px;">${timeText}</span>
-                                </div>
-                            `;
-                            div.onclick = () => loadChat(u.username);
-                            list.appendChild(div);
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching users:", error);
-            }
-        }
-
-        async function loadChat(receiver) {
-            currentReceiver = receiver;
-            currentGroupId = 0;
-            currentOffset = 0;
-            hasMoreMessages = true;
-
-            document.getElementById('chat-title').innerText = `${receiver}`;
-            document.getElementById('clearChatBtn').style.display = 'block';
-            document.getElementById('msgInput').disabled = false;
-            document.getElementById('sendBtn').disabled = false;
-            document.getElementById('msgInput').focus();
-
-            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`user-${receiver}`).classList.add('active');
-
-            unreadCounts[`user-${receiver}`] = 0;
-            let badge = document.querySelector(`#user-${receiver} .unread-badge`);
-            if (badge) badge.remove();
-
-            hideTypingIndicator();
-
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: "read_ack",
-                    receiver_username: receiver
-                }));
-            }
-
-            try {
-                // 🌟 تحديث ديناميكي للرابط
-                const res = await fetch(`http://${window.location.host}/messages?token=${myToken}&with=${receiver}&offset=${currentOffset}`);
-                if (res.ok) {
-                    const messages = await res.json();
-                    const box = document.getElementById('msg-box');
-                    box.innerHTML = '';
-
-                    if (messages && messages.length > 0) {
-                        if (messages.length < msgLimit) hasMoreMessages = false;
-                        currentOffset += messages.length;
-
-                        messages.forEach(msg => {
-                            appendMessage(msg);
-                            if (msg.username !== myName && msg.status !== "delivered" && msg.status !== "read") {
-                                if (ws && ws.readyState === WebSocket.OPEN) {
-                                    ws.send(JSON.stringify({
-                                        type: "delivery_ack",
-                                        id: msg.id,
-                                        receiver_username: msg.username
-                                    }));
-                                }
-                            }
-                        });
-                    } else {
-                        box.innerHTML = '<div id="empty-state"><div class="icon">👋</div><p>Say hello to ' + receiver + '!</p></div>';
-                        hasMoreMessages = false;
-                    }
-                }
-            } catch (error) {
-                console.error("Error loading chat:", error);
-            }
-        }
-
-        document.getElementById('msg-box').addEventListener('scroll', async function() {
-            if (this.scrollTop === 0 && hasMoreMessages && !isLoadingOldMessages) {
-                if (currentReceiver === "" && currentGroupId === 0) return;
-
-                isLoadingOldMessages = true;
-                let prevHeight = this.scrollHeight;
-
-                // 🌟 تحديث ديناميكي للرابط داخل حدث التمرير للرسائل القديمة
-                let url = currentGroupId !== 0 ?
-                    `http://${window.location.host}/messages?token=${myToken}&group_id=${currentGroupId}&offset=${currentOffset}` :
-                    `http://${window.location.host}/messages?token=${myToken}&with=${currentReceiver}&offset=${currentOffset}`;
-
-                try {
-                    const res = await fetch(url);
-                    if (res.ok) {
-                        const messages = await res.json();
-                        if (messages && messages.length > 0) {
-                            if (messages.length < msgLimit) hasMoreMessages = false;
-                            currentOffset += messages.length;
-
-                            for (let i = messages.length - 1; i >= 0; i--) {
-                                appendMessage(messages[i], "", true);
-                                if (currentGroupId === 0 && messages[i].username !== myName && messages[i].status !== "delivered" && messages[i].status !== "read") {
-                                    if (ws && ws.readyState === WebSocket.OPEN) {
-                                        ws.send(JSON.stringify({
-                                            type: "delivery_ack",
-                                            id: messages[i].id,
-                                            receiver_username: messages[i].username
-                                        }));
-                                    }
-                                }
-                            }
-                            this.scrollTop = this.scrollHeight - prevHeight;
-                        } else {
-                            hasMoreMessages = false;
-                        }
-                    }
-                } catch (error) {
-                    console.error("Error fetching older messages:", error);
-                }
-                isLoadingOldMessages = false;
-            }
-        });
-
-        function logout() {
-            if (ws) {
-                ws.close();
-            }
-            document.getElementById('chat-layout').style.display = 'none';
-            document.getElementById('auth-section').style.display = 'block';
-            myName = "";
-            myToken = "";
-            currentReceiver = "";
-            currentGroupId = 0;
-            document.getElementById('msg-box').innerHTML = '';
-            document.getElementById('user').value = '';
-            document.getElementById('pass').value = '';
-        }
-
-        function startWS(token) {
-            // 🌟 تحديث ديناميكي حاسم لرابط الويب سوكيت يربط السيرفر تلقائياً بأي جهاز
-            ws = new WebSocket(`ws://${window.location.host}/ws?token=${token}`);
-
-            ws.onopen = () => {
-                while (offlineQueue.length > 0) {
-                    const savedPayload = offlineQueue.shift();
-                    ws.send(JSON.stringify(savedPayload));
-                }
-                fetchUsers();
-            };
-
-            ws.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-
-                if (data.type === "status") {
-                    updateUserStatus(data.username, data.content);
-                } else if (data.type === "typing") {
-                    if (data.username === currentReceiver) {
-                        showTypingIndicator(data.username);
-                    }
-                } else if (data.type === "server_ack") {
-                    const msgDiv = document.getElementById(`msg-${data.id}`);
-                    if (msgDiv) {
-                        const tickSpan = msgDiv.querySelector('.tick');
-                        if (tickSpan) tickSpan.innerText = "✓";
-                    }
-                } else if (data.type === "delivery_ack") {
-                    const msgDiv = document.getElementById(`msg-${data.id}`);
-                    if (msgDiv) {
-                        const tickSpan = msgDiv.querySelector('.tick');
-                        if (tickSpan && tickSpan.style.color !== "var(--read-tick)") {
-                            tickSpan.innerText = "✓✓";
-                            tickSpan.style.color = "#999";
-                            tickSpan.style.fontWeight = "normal";
-                        }
-                    }
-                } else if (data.type === "read_ack") {
-                    if (data.username === currentReceiver) {
-                        document.querySelectorAll('.msg.me .tick').forEach(tickSpan => {
-                            if (tickSpan.innerText === "✓✓" || tickSpan.innerText === "✓") {
-                                tickSpan.innerText = "✓✓";
-                                tickSpan.style.color = "var(--read-tick)";
-                                tickSpan.style.fontWeight = "bold";
-                            }
-                        });
-                    }
-                } else if (data.type === "chat") {
-                    if (data.username === myName) return;
-
-                    let isUnread = false;
-                    if (data.group_id && data.group_id !== 0) {
-                        if (data.group_id !== currentGroupId) isUnread = true;
-                        updateSidebarPreview(data.username, data.group_id, data.content, data.created_at, isUnread);
-
-                        if (data.group_id === currentGroupId) {
-                            appendMessage(data);
-                        }
-                    } else {
-                        if (data.username !== currentReceiver) isUnread = true;
-                        updateSidebarPreview(data.username, data.group_id, data.content, data.created_at, isUnread);
-
-                        if (!document.getElementById(`user-${data.username}`)) {
-                            fetchUsers();
-                        }
-
-                        if (data.id) {
-                            ws.send(JSON.stringify({
-                                type: "delivery_ack",
-                                id: data.id,
-                                receiver_username: data.username
-                            }));
-                        }
-
-                        if (data.username === currentReceiver) {
-                            hideTypingIndicator();
-                            appendMessage(data);
-                            ws.send(JSON.stringify({
-                                type: "read_ack",
-                                receiver_username: data.username
-                            }));
-                        }
-                    }
-                }
-            };
-
-            ws.onclose = () => {
-                document.querySelectorAll('.status-indicator').forEach(el => el.innerText = "");
-                setTimeout(() => {
-                    if (myToken !== "") {
-                        startWS(myToken);
-                    }
-                }, 3000);
-            };
-
-            setInterval(() => {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({
-                        type: "ping"
-                    }));
-                }
-            }, 30000);
-        }
-
-        function updateSidebarPreview(targetUsername, groupId, content, timeStr, incrementUnread = false) {
-            let isGroup = groupId !== 0;
-            let targetId = isGroup ? `group-${groupId}` : `user-${targetUsername}`;
-            let listId = isGroup ? 'group-list' : 'user-list';
-
-            if (incrementUnread) {
-                unreadCounts[targetId] = (unreadCounts[targetId] || 0) + 1;
-            }
-
-            let itemEl = document.getElementById(targetId);
-            if (itemEl) {
-                let previewEl = itemEl.querySelector('.last-msg-preview');
-                if (previewEl) {
-                    previewEl.innerHTML = `<span class="preview-text">${content}</span> <span style="font-size: 10px;">${timeStr}</span>`;
-                }
-
-                let indicatorsEl = itemEl.querySelector('.indicators');
-                if (indicatorsEl) {
-                    let badgeEl = indicatorsEl.querySelector('.unread-badge');
-                    if (unreadCounts[targetId] > 0) {
-                        if (!badgeEl) {
-                            badgeEl = document.createElement('span');
-                            badgeEl.className = 'unread-badge';
-                            indicatorsEl.appendChild(badgeEl);
-                        }
-                        badgeEl.innerText = unreadCounts[targetId];
-                    } else if (badgeEl) {
-                        badgeEl.remove();
-                    }
-                }
-
-                let listEl = document.getElementById(listId);
-                if (listEl) {
-                    listEl.prepend(itemEl);
-                }
-            } else {
-                if (isGroup) fetchGroups();
-                else fetchUsers();
-            }
-        }
-
-        function updateUserStatus(username, status) {
-            const userDiv = document.getElementById(`user-${username}`);
-            if (userDiv) {
-                const indicator = userDiv.querySelector('.status-indicator');
-                indicator.innerText = status === "online" ? "🟢" : "";
-            } else if (status === "online") {
-                fetchUsers();
-            }
-        }
-
-        function notifyTyping() {
-            if (ws && ws.readyState === WebSocket.OPEN && currentReceiver !== "") {
-                ws.send(JSON.stringify({
-                    type: "typing",
-                    receiver_username: currentReceiver
-                }));
-            }
-        }
-
-        function showTypingIndicator(username) {
-            const ind = document.getElementById('typing-indicator');
-            ind.innerText = `${username} is typing...`;
-            clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => {
-                ind.innerText = "";
-            }, 1500);
-        }
-
-        function hideTypingIndicator() {
-            const ind = document.getElementById('typing-indicator');
-            if (ind) ind.innerText = "";
-            clearTimeout(typingTimeout);
-        }
-
-        function sendMsg() {
-            const msgInput = document.getElementById('msgInput');
-
-            if (msgInput.value) {
-                if (currentReceiver === "" && currentGroupId === 0) return;
-
-                const uniqueId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
-                const timeString = new Date().toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: 'numeric',
-                    hour12: true
-                });
-
-                const payload = {
-                    id: uniqueId,
-                    type: "chat",
-                    content: msgInput.value,
-                    username: myName,
-                    created_at: timeString
-                };
-
-                if (currentGroupId !== 0) {
-                    payload.group_id = currentGroupId;
-                } else {
-                    payload.receiver_username = currentReceiver;
-                }
-
-                appendMessage(payload, "🕒");
-                updateSidebarPreview(currentReceiver, currentGroupId, "You: " + msgInput.value, timeString, false);
-
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify(payload));
-                } else {
-                    offlineQueue.push(payload);
-                }
-
-                msgInput.value = '';
-            }
-        }
-
-        function appendMessage(data, tick = "", prepend = false) {
-            const box = document.getElementById('msg-box');
-
-            const emptyState = document.getElementById('empty-state');
-            if (emptyState) emptyState.remove();
-
-            const placeholder = box.querySelector('p');
-            if (placeholder && placeholder.innerText.includes('cleared')) placeholder.remove();
-
-            const div = document.createElement('div');
-            if (data.id) div.id = `msg-${data.id}`;
-
-            const timeStr = data.created_at || "";
-
-            if (data.username === myName) {
-                div.className = `msg me`;
-
-                let tickIcon = "✓";
-                let tickColor = "#999";
-                let isBold = "normal";
-
-                if (data.status === "read") {
-                    tickIcon = "✓✓";
-                    tickColor = "var(--read-tick)";
-                    isBold = "bold";
-                } else if (data.status === "delivered" || tick === "✓✓") {
-                    tickIcon = "✓✓";
-                    tickColor = "#999";
-                } else if (tick === "🕒") {
-                    tickIcon = "🕒";
-                }
-
-                div.innerHTML = `
-                    <b>${data.username}:</b><br>${data.content}
-                    <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 5px; gap: 5px; font-size: 11px; color: #888;">
-                        <span>${timeStr}</span>
-                        <span class="tick" style="font-size:12px; color:${tickColor}; font-weight:${isBold};">${tickIcon}</span>
-                    </div>
-                `;
-            } else {
-                div.className = `msg others`;
-                div.innerHTML = `
-                    <b>${data.username}:</b><br>${data.content}
-                    <div style="display: flex; justify-content: flex-end; margin-top: 5px; font-size: 11px; color: #888;">
-                        <span>${timeStr}</span>
-                    </div>
-                `;
-            }
-
-            if (prepend) {
-                box.prepend(div);
-            } else {
-                box.appendChild(div);
-                box.scrollTop = box.scrollHeight;
-            }
-        }
-    </script>
+    <div id="lightbox" onclick="closeLightbox()">
+        <span id="lightbox-close">&times;</span>
+        <img id="lightbox-img" src="" onclick="event.stopPropagation()">
+    </div>
+
+    <div id="broadcastModal">
+        <h3>📢 Broadcast Message</h3>
+        <p style="font-size: 12px; color: var(--text-light); margin-top: 0; margin-bottom: 10px;">Select specific recipients or send to all.</p>
+
+        <div id="broadcastTargets" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 5px; padding: 10px; margin-bottom: 10px; background: var(--bg-color); text-align: left;">
+        </div>
+
+        <textarea id="broadcastText" rows="3" style="width: 100%; border-radius: 5px; padding: 10px; border: 1px solid var(--border-color); box-sizing: border-box; background: var(--panel-bg); color: var(--text-dark); font-family: inherit;" placeholder="Write announcement here..."></textarea>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+            <button onclick="document.getElementById('broadcastModal').style.display='none'" style="background: #dc3545; padding: 8px 15px;">Cancel</button>
+            <button onclick="sendBroadcast()" style="background: #28a745; padding: 8px 15px;">Send</button>
+        </div>
+    </div>
+
+    <div id="dashboardModal">
+        <h3 style="color:var(--primary-color); margin-top:0;">📊 Server Monitor</h3>
+        <div class="stat-box">Active Goroutines: <span id="stat-goroutines">0</span></div>
+        <div class="stat-box">Memory Usage: <span id="stat-memory">0 MB</span></div>
+        <div class="stat-box">CPU Cores: <span id="stat-cpu">0 Cores</span></div>
+        <button onclick="closeDashboard()" style="background: #dc3545; width:100%; margin-top:10px;">Close Dashboard</button>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 
 </html>
